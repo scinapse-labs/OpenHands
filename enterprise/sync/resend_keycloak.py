@@ -216,7 +216,7 @@ def get_total_keycloak_users() -> int:
         max=MAX_BACKOFF_SECONDS,
         exp_base=BACKOFF_FACTOR,
     ),
-    retry=retry_if_exception(is_rate_limit_error),
+    retry=retry_if_exception(_is_retryable_resend_error),
 )
 def get_resend_contacts(audience_id: str) -> Dict[str, Dict[str, Any]]:
     """Get contacts from Resend.
@@ -296,7 +296,7 @@ def add_contact_to_resend(
         max=MAX_BACKOFF_SECONDS,
         exp_base=BACKOFF_FACTOR,
     ),
-    retry=retry_if_exception(is_rate_limit_error),
+    retry=retry_if_exception(_is_retryable_resend_error),
 )
 def send_welcome_email(
     email: str,
@@ -314,7 +314,7 @@ def send_welcome_email(
         The API response.
 
     Raises:
-        ResendError: If the API call fails.
+        Exception: If the API call fails after retries.
     """
     # Add a small delay to proactively avoid rate limits (2 req/sec = 0.5s between requests)
     time.sleep(1 / RATE_LIMIT)
