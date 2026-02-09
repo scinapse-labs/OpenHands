@@ -28,7 +28,6 @@ Optional environment variables:
 import os
 import re
 import sys
-import time
 from typing import Any, Dict, List, Optional
 
 import resend
@@ -124,11 +123,12 @@ def is_rate_limit_error(exception: BaseException) -> bool:
     Returns:
         True if the exception is a rate limit error, False otherwise.
     """
+    # Check for Resend-specific rate limit exception via status_code attribute
+    if hasattr(exception, 'status_code'):
+        return exception.status_code == 429
+    # Fallback to string check for other exception types
     error_str = str(exception).lower()
-    return any(
-        indicator in error_str
-        for indicator in ['rate limit', 'too many requests', '429']
-    )
+    return '429' in error_str or 'rate limit' in error_str
 
 
 def _is_retryable_resend_error(exception: BaseException) -> bool:
@@ -269,11 +269,8 @@ def add_contact_to_resend(
         The API response.
 
     Raises:
-        ResendAPIError: If the API call fails after retries.
+        Exception: If the API call fails after retries.
     """
-    # Add a small delay to proactively avoid rate limits (2 req/sec = 0.5s between requests)
-    time.sleep(1 / RATE_LIMIT)
-
     try:
         params = {'audience_id': audience_id, 'email': email}
 
@@ -316,8 +313,6 @@ def send_welcome_email(
     Raises:
         Exception: If the API call fails after retries.
     """
-    # Add a small delay to proactively avoid rate limits (2 req/sec = 0.5s between requests)
-    time.sleep(1 / RATE_LIMIT)
 
     try:
         # Prepare the recipient name
@@ -439,7 +434,7 @@ def sync_users_to_resend():
                     last_name = user.get('last_name')
 
                     # Add the contact to the Resend audience
-                    # Rate limiting is handled by time.sleep() and tenacity retry
+                    # Rate limiting and retries are handled by tenacity @retry decorator
                     add_contact_to_resend(
                         RESEND_AUDIENCE_ID, email, first_name, last_name
                     )
@@ -447,7 +442,7 @@ def sync_users_to_resend():
                     stats['added_contacts'] += 1
 
                     # Send a welcome email to the newly added contact
-                    # Rate limiting is handled by time.sleep() and tenacity retry
+                    # Rate limiting and retries are handled by tenacity @retry decorator
                     try:
                         send_welcome_email(email, first_name, last_name)
                         logger.info(f'Sent welcome email to {email}')
