@@ -24,7 +24,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Python packages with security fixes
-RUN pip install alembic psycopg2-binary cloud-sql-python-connector pg8000 gspread stripe python-keycloak asyncpg sqlalchemy[asyncio] resend tenacity slack-sdk ddtrace "posthog>=6.0.0" "limits==5.2.0" coredis prometheus-client shap scikit-learn pandas numpy && \
+RUN pip install "alembic==1.16.5" "psycopg2-binary==2.9.10" "cloud-sql-python-connector==1.18.4" "pg8000==1.31.5" "gspread==6.2.1" "stripe==11.6.0" "python-keycloak==5.8.1" "asyncpg==0.30.0" "sqlalchemy[asyncio]==2.0.43" "resend==2.13.1" "tenacity==9.1.2" "slack-sdk==3.36.0" "ddtrace==3.13.0" "posthog==6.7.6" "limits==5.5.0" "coredis==4.24.0" "prometheus-client==0.22.1" "shap==0.48.0" "scikit-learn==1.7.1" "pandas==2.3.2" "numpy==2.2.6" && \
     # Update packages with known CVE fixes
     pip install --upgrade \
         "mcp>=1.10.0" \
