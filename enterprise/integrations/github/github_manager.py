@@ -236,7 +236,11 @@ class GithubManager(Manager):
             if 'comment' in payload:
                 comment_id = payload['comment']['id']
                 # Check if this is an inline PR review comment
-                if payload.get('action') == 'created' and 'pull_request_review_id' in payload.get('comment', {}):
+                if payload.get(
+                    'action'
+                ) == 'created' and 'pull_request_review_id' in payload.get(
+                    'comment', {}
+                ):
                     is_inline_pr_comment = True
 
         if not issue_number:
