@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { useWindowSize } from "@uidotdev/usehooks";
 import { useClickOutsideElement } from "#/hooks/use-click-outside-element";
+import { useBreakpoint } from "#/hooks/use-breakpoint";
 import { cn } from "#/utils/utils";
 import { ContextMenu } from "#/ui/context-menu";
 import { ContextMenuListItem } from "../context-menu/context-menu-list-item";
@@ -62,7 +62,7 @@ export function ConversationNameContextMenu({
   shareUrl,
   position = "bottom",
 }: ConversationNameContextMenuProps) {
-  const { width } = useWindowSize();
+  const isMobile = useBreakpoint();
 
   const { t } = useTranslation();
   const ref = useClickOutsideElement<HTMLUListElement>(onClose);
@@ -82,8 +82,6 @@ export function ConversationNameContextMenu({
   const hasTools = Boolean(onShowAgentTools || onShowSkills || onShowHooks);
   const hasInfo = Boolean(onDisplayCost);
   const hasControl = Boolean(onStop || onDelete);
-
-  const isMobile = width && width <= 1024;
 
   return (
     <ContextMenu
