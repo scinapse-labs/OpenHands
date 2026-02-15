@@ -43,8 +43,9 @@ from tenacity import (
 
 from openhands.core.logger import openhands_logger as logger
 
-# HTTP status codes that should trigger a retry
-RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+# HTTP status codes that should trigger a retry (gateway/service errors + rate limits)
+# Note: 500 is excluded as it typically indicates a permanent server bug, not transient issues
+RETRYABLE_STATUS_CODES = {429, 502, 503, 504}
 
 # Get Keycloak configuration from environment variables
 KEYCLOAK_SERVER_URL = os.environ.get('KEYCLOAK_SERVER_URL', '')
@@ -123,7 +124,7 @@ def _is_retryable_resend_error(exception: BaseException) -> bool:
 
     Retryable errors include:
     - Rate limit errors (429)
-    - Server errors (500, 502, 503, 504)
+    - Gateway errors (502, 503, 504)
     - Connection/timeout errors (wrapped in ResendError or raised directly)
 
     Args:
@@ -134,6 +135,7 @@ def _is_retryable_resend_error(exception: BaseException) -> bool:
     """
     # Check for Resend's RateLimitError directly
     if isinstance(exception, RateLimitError):
+        logger.debug(f'Retrying due to RateLimitError: {exception}')
         return True
 
     # Check for ResendError with retryable status codes
@@ -143,13 +145,20 @@ def _is_retryable_resend_error(exception: BaseException) -> bool:
             try:
                 status_code = int(exception.code)
                 if status_code in RETRYABLE_STATUS_CODES:
+                    logger.debug(
+                        f'Retrying due to ResendError with status code {status_code}'
+                    )
                     return True
             except (ValueError, TypeError):
-                pass
+                logger.warning(
+                    f'ResendError with non-integer code: {exception.code}'
+                )
 
     # Check for connection/timeout errors (can be raised by underlying HTTP client)
-    # These are Python built-in exceptions that requests library can raise
-    if isinstance(exception, (ConnectionError, TimeoutError, OSError)):
+    # Note: ConnectionError and TimeoutError are the specific network-related errors
+    # We don't catch OSError broadly to avoid retrying on filesystem errors
+    if isinstance(exception, (ConnectionError, TimeoutError)):
+        logger.debug(f'Retrying due to connection/timeout error: {exception}')
         return True
 
     return False
