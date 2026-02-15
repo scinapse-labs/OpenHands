@@ -661,8 +661,20 @@ async def get_conversation_hooks(
 
         agent_server_url = replace_localhost_hostname_for_docker(agent_server_url)
 
+        # Determine project directory for hooks
+        # If a repository is selected, hooks are in {working_dir}/{repo_name}/.openhands/hooks.json
+        # Otherwise, hooks are in {working_dir}/.openhands/hooks.json
+        project_dir = sandbox_spec.working_dir
+        if conversation.selected_repository:
+            repo_name = conversation.selected_repository.split('/')[-1]
+            project_dir = f'{sandbox_spec.working_dir}/{repo_name}'
+
         # Load hooks from agent-server
-        logger.info(f'Loading hooks for conversation {conversation_id}')
+        logger.info(
+            f'Loading hooks for conversation {conversation_id}, '
+            f'agent_server_url={agent_server_url}, '
+            f'project_dir={project_dir}'
+        )
 
         from openhands.app_server.app_conversation.hook_loader import (
             load_hooks_from_agent_server,
@@ -671,7 +683,7 @@ async def get_conversation_hooks(
         hook_config = await load_hooks_from_agent_server(
             agent_server_url=agent_server_url,
             session_api_key=sandbox.session_api_key,
-            project_dir=sandbox_spec.working_dir,
+            project_dir=project_dir,
         )
 
         # Transform hook_config to response format
