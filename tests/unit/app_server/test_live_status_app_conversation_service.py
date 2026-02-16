@@ -2872,3 +2872,113 @@ class TestLoadHooksFromWorkspace:
 
         # Assert
         assert result is None
+
+    @pytest.mark.asyncio
+    @patch('openhands.app_server.app_conversation.hook_loader.httpx.AsyncClient')
+    async def test_load_hooks_from_workspace_with_selected_repository(
+        self, mock_async_client
+    ):
+        """Test loading hooks when a repository is selected.
+
+        When a repository is selected, hooks should be loaded from
+        {working_dir}/{repo_name}/.openhands/hooks.json instead of
+        {working_dir}/.openhands/hooks.json.
+        """
+        # Arrange
+        mock_remote_workspace = Mock(spec=AsyncRemoteWorkspace)
+        mock_remote_workspace.host = 'http://agent-server:8000'
+        mock_remote_workspace._headers = {'X-Session-API-Key': 'test-key'}
+
+        hooks_response = {
+            'hook_config': {
+                'stop': [
+                    {
+                        'matcher': '*',
+                        'hooks': [{'type': 'command', 'command': 'echo "stop hook"'}],
+                    }
+                ]
+            }
+        }
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = hooks_response
+        mock_response.raise_for_status = Mock()
+
+        mock_client_instance = AsyncMock()
+        mock_client_instance.post = AsyncMock(return_value=mock_response)
+        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_instance.__aexit__ = AsyncMock(return_value=None)
+        mock_async_client.return_value = mock_client_instance
+
+        # Act
+        result = await self.service._load_hooks_from_workspace(
+            mock_remote_workspace,
+            '/workspace/project',
+            selected_repository='OpenHands/software-agent-sdk',
+        )
+
+        # Assert
+        assert result is not None
+        assert not result.is_empty()
+        # The project_dir should include the repository name
+        mock_client_instance.post.assert_called_once_with(
+            'http://agent-server:8000/api/hooks',
+            json={'project_dir': '/workspace/project/software-agent-sdk'},
+            headers={
+                'Content-Type': 'application/json',
+                'X-Session-API-Key': 'test-key',
+            },
+            timeout=30.0,
+        )
+
+    @pytest.mark.asyncio
+    @patch('openhands.app_server.app_conversation.hook_loader.httpx.AsyncClient')
+    async def test_load_hooks_from_workspace_without_selected_repository(
+        self, mock_async_client
+    ):
+        """Test loading hooks without a selected repository uses working_dir directly."""
+        # Arrange
+        mock_remote_workspace = Mock(spec=AsyncRemoteWorkspace)
+        mock_remote_workspace.host = 'http://agent-server:8000'
+        mock_remote_workspace._headers = {'X-Session-API-Key': 'test-key'}
+
+        hooks_response = {
+            'hook_config': {
+                'stop': [
+                    {
+                        'matcher': '*',
+                        'hooks': [{'type': 'command', 'command': 'echo "stop hook"'}],
+                    }
+                ]
+            }
+        }
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = hooks_response
+        mock_response.raise_for_status = Mock()
+
+        mock_client_instance = AsyncMock()
+        mock_client_instance.post = AsyncMock(return_value=mock_response)
+        mock_client_instance.__aenter__ = AsyncMock(return_value=mock_client_instance)
+        mock_client_instance.__aexit__ = AsyncMock(return_value=None)
+        mock_async_client.return_value = mock_client_instance
+
+        # Act - without selected_repository
+        result = await self.service._load_hooks_from_workspace(
+            mock_remote_workspace,
+            '/workspace/project',
+            selected_repository=None,
+        )
+
+        # Assert
+        assert result is not None
+        # The project_dir should be just the working_dir
+        mock_client_instance.post.assert_called_once_with(
+            'http://agent-server:8000/api/hooks',
+            json={'project_dir': '/workspace/project'},
+            headers={
+                'Content-Type': 'application/json',
+                'X-Session-API-Key': 'test-key',
+            },
+            timeout=30.0,
+        )

@@ -1068,6 +1068,7 @@ class LiveStatusAppConversationService(AppConversationServiceBase):
         self,
         remote_workspace: AsyncRemoteWorkspace,
         working_dir: str,
+        selected_repository: str | None = None,
     ) -> HookConfig | None:
         """Load hooks from .openhands/hooks.json in the remote workspace.
 
@@ -1080,6 +1081,8 @@ class LiveStatusAppConversationService(AppConversationServiceBase):
         Args:
             remote_workspace: AsyncRemoteWorkspace for accessing the agent server
             working_dir: Working directory path in the sandbox
+            selected_repository: Repository name (e.g., 'OpenHands/software-agent-sdk')
+                If provided, hooks will be loaded from {working_dir}/{repo_name}/.openhands/hooks.json
 
         Returns:
             HookConfig if hooks.json exists and is valid, None otherwise.
@@ -1095,10 +1098,18 @@ class LiveStatusAppConversationService(AppConversationServiceBase):
             ensures that conversation startup is not blocked by hook loading failures.
             Errors are logged as warnings for debugging purposes.
         """
+        # Determine project directory for hooks
+        # If a repository is selected, hooks are in {working_dir}/{repo_name}/.openhands/hooks.json
+        # Otherwise, hooks are in {working_dir}/.openhands/hooks.json
+        project_dir = working_dir
+        if selected_repository:
+            repo_name = selected_repository.split('/')[-1]
+            project_dir = f'{working_dir}/{repo_name}'
+
         return await load_hooks_from_agent_server(
             agent_server_url=remote_workspace.host,
             session_api_key=remote_workspace._headers.get('X-Session-API-Key'),
-            project_dir=working_dir,
+            project_dir=project_dir,
         )
 
     async def _finalize_conversation_request(
@@ -1159,7 +1170,7 @@ class LiveStatusAppConversationService(AppConversationServiceBase):
             # Load hooks from workspace (.openhands/hooks.json)
             try:
                 hook_config = await self._load_hooks_from_workspace(
-                    remote_workspace, working_dir
+                    remote_workspace, working_dir, selected_repository
                 )
             except Exception as e:
                 _logger.warning(f'Failed to load hooks: {e}', exc_info=True)
