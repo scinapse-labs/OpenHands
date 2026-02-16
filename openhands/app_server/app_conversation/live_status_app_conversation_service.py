@@ -45,6 +45,7 @@ from openhands.app_server.app_conversation.app_conversation_start_task_service i
     AppConversationStartTaskService,
 )
 from openhands.app_server.app_conversation.hook_loader import (
+    get_project_dir_for_hooks,
     load_hooks_from_agent_server,
 )
 from openhands.app_server.app_conversation.sql_app_conversation_info_service import (
@@ -1098,13 +1099,7 @@ class LiveStatusAppConversationService(AppConversationServiceBase):
             ensures that conversation startup is not blocked by hook loading failures.
             Errors are logged as warnings for debugging purposes.
         """
-        # Determine project directory for hooks
-        # If a repository is selected, hooks are in {working_dir}/{repo_name}/.openhands/hooks.json
-        # Otherwise, hooks are in {working_dir}/.openhands/hooks.json
-        project_dir = working_dir
-        if selected_repository:
-            repo_name = selected_repository.split('/')[-1]
-            project_dir = f'{working_dir}/{repo_name}'
+        project_dir = get_project_dir_for_hooks(working_dir, selected_repository)
 
         return await load_hooks_from_agent_server(
             agent_server_url=remote_workspace.host,

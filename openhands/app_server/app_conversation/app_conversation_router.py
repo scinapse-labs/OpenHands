@@ -671,22 +671,21 @@ async def get_conversation_hooks(
             return ctx
 
         # Determine project directory for hooks
-        # If a repository is selected, hooks are in {working_dir}/{repo_name}/.openhands/hooks.json
-        # Otherwise, hooks are in {working_dir}/.openhands/hooks.json
-        project_dir = ctx.sandbox_spec.working_dir
-        if ctx.conversation.selected_repository:
-            repo_name = ctx.conversation.selected_repository.split('/')[-1]
-            project_dir = f'{ctx.sandbox_spec.working_dir}/{repo_name}'
+        from openhands.app_server.app_conversation.hook_loader import (
+            get_project_dir_for_hooks,
+            load_hooks_from_agent_server,
+        )
+
+        project_dir = get_project_dir_for_hooks(
+            ctx.sandbox_spec.working_dir,
+            ctx.conversation.selected_repository,
+        )
 
         # Load hooks from agent-server
         logger.info(
             f'Loading hooks for conversation {conversation_id}, '
             f'agent_server_url={ctx.agent_server_url}, '
             f'project_dir={project_dir}'
-        )
-
-        from openhands.app_server.app_conversation.hook_loader import (
-            load_hooks_from_agent_server,
         )
 
         hook_config = await load_hooks_from_agent_server(

@@ -2873,6 +2873,37 @@ class TestLoadHooksFromWorkspace:
         # Assert
         assert result is None
 
+    def test_get_project_dir_for_hooks_with_selected_repository(self):
+        """Test get_project_dir_for_hooks with a selected repository."""
+        from openhands.app_server.app_conversation.hook_loader import (
+            get_project_dir_for_hooks,
+        )
+
+        result = get_project_dir_for_hooks(
+            '/workspace/project',
+            'OpenHands/software-agent-sdk',
+        )
+        assert result == '/workspace/project/software-agent-sdk'
+
+    def test_get_project_dir_for_hooks_without_selected_repository(self):
+        """Test get_project_dir_for_hooks without a selected repository."""
+        from openhands.app_server.app_conversation.hook_loader import (
+            get_project_dir_for_hooks,
+        )
+
+        result = get_project_dir_for_hooks('/workspace/project', None)
+        assert result == '/workspace/project'
+
+    def test_get_project_dir_for_hooks_with_empty_string(self):
+        """Test get_project_dir_for_hooks with empty string repository."""
+        from openhands.app_server.app_conversation.hook_loader import (
+            get_project_dir_for_hooks,
+        )
+
+        # Empty string should be treated as no repository
+        result = get_project_dir_for_hooks('/workspace/project', '')
+        assert result == '/workspace/project'
+
     @pytest.mark.asyncio
     @patch('openhands.app_server.app_conversation.hook_loader.httpx.AsyncClient')
     async def test_load_hooks_from_workspace_with_selected_repository(

@@ -16,6 +16,30 @@ from openhands.sdk.hooks import HookConfig
 _logger = logging.getLogger(__name__)
 
 
+def get_project_dir_for_hooks(
+    working_dir: str,
+    selected_repository: str | None = None,
+) -> str:
+    """Get the project directory path for loading hooks.
+
+    When a repository is selected, hooks are loaded from
+    {working_dir}/{repo_name}/.openhands/hooks.json.
+    Otherwise, hooks are loaded from {working_dir}/.openhands/hooks.json.
+
+    Args:
+        working_dir: Base working directory path in the sandbox
+        selected_repository: Repository name (e.g., 'OpenHands/software-agent-sdk')
+            If provided, the repo name is appended to working_dir.
+
+    Returns:
+        The project directory path where hooks.json should be located.
+    """
+    if selected_repository:
+        repo_name = selected_repository.split('/')[-1]
+        return f'{working_dir}/{repo_name}'
+    return working_dir
+
+
 async def load_hooks_from_agent_server(
     agent_server_url: str,
     session_api_key: str | None,
