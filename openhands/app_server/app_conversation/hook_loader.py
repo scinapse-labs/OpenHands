@@ -44,6 +44,7 @@ async def load_hooks_from_agent_server(
     agent_server_url: str,
     session_api_key: str | None,
     project_dir: str,
+    httpx_client: httpx.AsyncClient | None = None,
 ) -> HookConfig | None:
     """Load hooks from the agent-server.
 
@@ -74,8 +75,19 @@ async def load_hooks_from_agent_server(
             headers['X-Session-API-Key'] = session_api_key
 
         # Make API request
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
+        if httpx_client is None:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f'{agent_server_url}/api/hooks',
+                    json=payload,
+                    headers=headers,
+                    timeout=30.0,
+                )
+                response.raise_for_status()
+
+                data = response.json()
+        else:
+            response = await httpx_client.post(
                 f'{agent_server_url}/api/hooks',
                 json=payload,
                 headers=headers,

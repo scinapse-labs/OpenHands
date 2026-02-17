@@ -1143,6 +1143,7 @@ class LiveStatusAppConversationService(AppConversationServiceBase):
             agent_server_url=remote_workspace.host,
             session_api_key=remote_workspace._headers.get('X-Session-API-Key'),
             project_dir=project_dir,
+            httpx_client=self.httpx_client,
         )
 
     async def _finalize_conversation_request(

@@ -650,6 +650,7 @@ async def get_conversation_hooks(
     ),
     sandbox_service: SandboxService = sandbox_service_dependency,
     sandbox_spec_service: SandboxSpecService = sandbox_spec_service_dependency,
+    httpx_client: httpx.AsyncClient = httpx_client_dependency,
 ) -> JSONResponse:
     """Get all hooks associated with the conversation.
 
@@ -692,6 +693,7 @@ async def get_conversation_hooks(
             agent_server_url=ctx.agent_server_url,
             session_api_key=ctx.session_api_key,
             project_dir=project_dir,
+            httpx_client=httpx_client,
         )
 
         # Transform hook_config to response format
