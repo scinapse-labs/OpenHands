@@ -52,7 +52,7 @@ async def get_agents() -> list[str]:
     return sorted(Agent.list_agents())
 
 
-@app.get('/security-analyzers', response_model=list[str])
+@app.get('/security-analyzers', response_model=list[str], deprecated=True)
 async def get_security_analyzers() -> list[str]:
     """Get all supported security analyzers.
 

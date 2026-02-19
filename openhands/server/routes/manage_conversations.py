@@ -1239,7 +1239,7 @@ async def update_conversation(
         )
 
 
-@app.post('/conversations/{conversation_id}/exp-config')
+@app.post('/conversations/{conversation_id}/exp-config', deprecated=True)
 def add_experiment_config_for_conversation(
     exp_config: ExperimentConfig,
     conversation_id: str = Depends(validate_conversation_id),
@@ -1456,7 +1456,7 @@ def _create_combined_page_id(
     return base64.b64encode(json.dumps(next_page_data).encode()).decode()
 
 
-@app.get('/microagent-management/conversations')
+@app.get('/microagent-management/conversations', deprecated=True)
 async def get_microagent_management_conversations(
     selected_repository: str,
     page_id: str | None = None,
