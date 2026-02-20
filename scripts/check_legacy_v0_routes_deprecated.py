@@ -25,21 +25,21 @@ from fastapi.routing import APIRoute
 @lru_cache(maxsize=None)
 def _is_legacy_v0_routes_module(module_name: str) -> tuple[bool, Path | None]:
     module = importlib.import_module(module_name)
-    module_file = getattr(module, "__file__", None)
+    module_file = getattr(module, '__file__', None)
     if not module_file:
         return False, None
 
     module_path = Path(module_file)
 
-    if "openhands/server/routes" not in module_path.as_posix():
+    if 'openhands/server/routes' not in module_path.as_posix():
         return False, module_path
 
     try:
-        text = module_path.read_text(encoding="utf-8")
+        text = module_path.read_text(encoding='utf-8')
     except OSError:
         return False, module_path
 
-    return "Tag: Legacy-V0" in text, module_path
+    return 'Tag: Legacy-V0' in text, module_path
 
 
 def main() -> int:
@@ -52,10 +52,10 @@ def main() -> int:
         if not isinstance(route, APIRoute):
             continue
 
-        if not route.path.startswith("/api/"):
+        if not route.path.startswith('/api/'):
             continue
 
-        module_name = getattr(route.endpoint, "__module__", "")
+        module_name = getattr(route.endpoint, '__module__', '')
         is_legacy, module_path = _is_legacy_v0_routes_module(module_name)
         if not is_legacy:
             continue
@@ -63,36 +63,37 @@ def main() -> int:
         if route.deprecated:
             continue
 
-        methods = ",".join(
+        methods = ','.join(
             sorted(
                 m
                 for m in route.methods or set()
-                if m not in {
-                    "HEAD",
-                    "OPTIONS",
+                if m
+                not in {
+                    'HEAD',
+                    'OPTIONS',
                 }
             )
         )
         missing.append(
             (
-                methods or "?",
+                methods or '?',
                 route.path,
                 module_name,
-                str(module_path) if module_path else "(unknown)",
+                str(module_path) if module_path else '(unknown)',
             )
         )
 
     if not missing:
-        print("OK: all Legacy-V0 routes under openhands/server/routes are deprecated")
+        print('OK: all Legacy-V0 routes under openhands/server/routes are deprecated')
         return 0
 
-    print("ERROR: Legacy-V0 routes missing deprecated=True:\n")
+    print('ERROR: Legacy-V0 routes missing deprecated=True:\n')
     for methods, path, module_name, module_path in sorted(missing):
-        print(f"- {methods:10} {path}  ({module_name} :: {module_path})")
+        print(f'- {methods:10} {path}  ({module_name} :: {module_path})')
 
-    print(f"\nFound {len(missing)} missing deprecation marker(s).")
+    print(f'\nFound {len(missing)} missing deprecation marker(s).')
     return 1
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise SystemExit(main())

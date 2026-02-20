@@ -246,7 +246,9 @@ async def get_suggested_tasks(
     raise AuthenticationError('No providers set.')
 
 
-@app.get('/repository/branches', response_model=PaginatedBranchesResponse, deprecated=True)
+@app.get(
+    '/repository/branches', response_model=PaginatedBranchesResponse, deprecated=True
+)
 async def get_repository_branches(
     repository: str,
     page: int = 1,
