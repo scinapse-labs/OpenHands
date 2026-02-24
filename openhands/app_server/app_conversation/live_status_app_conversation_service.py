@@ -73,6 +73,7 @@ from openhands.app_server.user.user_models import UserInfo
 from openhands.app_server.utils.docker_utils import (
     replace_localhost_hostname_for_docker,
 )
+from openhands.app_server.utils.litellm_provider import coerce_llm_api_key_for_model
 from openhands.app_server.utils.llm_metadata import (
     get_llm_metadata,
     should_set_litellm_extra_body,
@@ -688,10 +689,16 @@ class LiveStatusAppConversationService(AppConversationServiceBase):
         if model and model.startswith('openhands/'):
             base_url = user.llm_base_url or self.openhands_provider_base_url
 
+        api_key = coerce_llm_api_key_for_model(
+            api_key=user.llm_api_key,
+            model=model,
+            api_base=base_url,
+        )
+
         return LLM(
             model=model,
             base_url=base_url,
-            api_key=user.llm_api_key,
+            api_key=api_key,
             usage_id='agent',
         )
 
