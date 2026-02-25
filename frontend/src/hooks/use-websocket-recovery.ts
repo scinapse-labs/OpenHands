@@ -60,14 +60,13 @@ export function useWebSocketRecovery(conversationId: string) {
       // Only handle when tab becomes visible (gains focus)
       if (document.visibilityState !== "visible") return;
 
-      // Check if conversation is stopped and needs to be resumed
+      // Check if conversation data is loaded (not undefined/null)
+      // and if conversation is stopped and needs to be resumed
       if (
-        conversation?.status === "STOPPED" &&
+        conversation &&
+        conversation.status === "STOPPED" &&
         !recoveryInProgressRef.current
       ) {
-        // Prevent concurrent recovery attempts
-        if (recoveryInProgressRef.current) return;
-
         // Check cooldown
         const now = Date.now();
         if (
