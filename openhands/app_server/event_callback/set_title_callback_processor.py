@@ -62,7 +62,7 @@ class SetTitleCallbackProcessor(EventCallbackProcessor):
                 app_conversation_url
             )
 
-            # Poll with exponential backoff: ~3.75s total wait time before giving up
+            # Poll ~3.75s total wait time before giving up
             _TITLE_POLL_DELAYS_S = (0.25, 0.5, 1.0, 2.0)
             for delay_s in _TITLE_POLL_DELAYS_S:
                 try:
