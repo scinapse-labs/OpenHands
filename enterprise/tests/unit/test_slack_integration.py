@@ -146,7 +146,9 @@ async def test_get_default_repo_from_channel_slack_api_error(slack_manager):
 async def test_get_default_repo_from_channel_generic_error(slack_manager):
     """Test handling of generic exceptions."""
     mock_client = MagicMock()
-    mock_client.conversations_info = AsyncMock(side_effect=Exception('Unexpected error'))
+    mock_client.conversations_info = AsyncMock(
+        side_effect=Exception('Unexpected error')
+    )
     with patch(
         'integrations.slack.slack_manager.AsyncWebClient', return_value=mock_client
     ):

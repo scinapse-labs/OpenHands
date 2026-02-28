@@ -117,8 +117,14 @@ class SlackManager(Manager):
                 # Handle case where purpose/topic could be string instead of dict
                 purpose_dict = channel.get('purpose', {})
                 topic_dict = channel.get('topic', {})
-                purpose = purpose_dict.get('value', '') if isinstance(purpose_dict, dict) else ''
-                topic = topic_dict.get('value', '') if isinstance(topic_dict, dict) else ''
+                purpose = (
+                    purpose_dict.get('value', '')
+                    if isinstance(purpose_dict, dict)
+                    else ''
+                )
+                topic = (
+                    topic_dict.get('value', '') if isinstance(topic_dict, dict) else ''
+                )
                 repo = self._parse_repo_from_channel_description(
                     purpose
                 ) or self._parse_repo_from_channel_description(topic)
