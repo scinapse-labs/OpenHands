@@ -37,7 +37,7 @@ from storage.database import session_maker
 from storage.user import User
 from storage.user_store import UserStore
 
-from openhands.analytics import get_analytics_service
+from openhands.analytics import analytics_constants, get_analytics_service
 from openhands.core.logger import openhands_logger as logger
 from openhands.integrations.provider import ProviderHandler
 from openhands.integrations.service_types import ProviderType, TokenResponse
@@ -231,9 +231,11 @@ async def keycloak_callback(
 
     email = user_info.get('email')
     user_id = user_info['sub']
+    is_new_user = False
     user = await UserStore.get_user_by_id_async(user_id)
     if not user:
         user = await UserStore.create_user(user_id, user_info)
+        is_new_user = True
     else:
         # Existing user — gradually backfill contact_name if it still has a username-style value
         await UserStore.backfill_contact_name(user_id, user_info)
@@ -249,6 +251,31 @@ async def keycloak_callback(
         )
 
     logger.info(f'Logging in user {str(user.id)} in org {user.current_org_id}')
+
+    # Analytics: user signed up event (fires only for new users, once per user)
+    if is_new_user:
+        try:
+            analytics = get_analytics_service()
+            if analytics:
+                consented = user.user_consents_to_analytics is True  # None = undecided = not consented
+                analytics.capture(
+                    distinct_id=user_id,
+                    event=analytics_constants.USER_SIGNED_UP,
+                    properties={
+                        'idp': user_info.get('identity_provider', 'keycloak'),
+                        'email_domain': email.split('@')[1] if email and '@' in email else None,
+                        'invitation_source': 'invitation' if invitation_token else 'self_signup',
+                    },
+                    org_id=str(user.current_org_id) if user.current_org_id else None,
+                    consented=consented,
+                )
+                analytics.set_person_properties(
+                    distinct_id=user_id,
+                    properties={'signed_up_at': datetime.now(timezone.utc).isoformat()},
+                    consented=consented,
+                )
+        except Exception:
+            logger.exception('analytics:user_signed_up:failed')
 
     # reCAPTCHA verification with Account Defender
     if RECAPTCHA_SITE_KEY:
