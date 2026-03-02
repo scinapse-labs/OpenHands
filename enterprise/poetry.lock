@@ -6175,6 +6175,7 @@ kubernetes = ">=33.1"
 libtmux = ">=0.46.2"
 litellm = ">=1.74.3"
 lmnr = ">=0.7.20"
+mcp = ">=1.25.0"
 memory-profiler = ">=0.61"
 numpy = "*"
 openai = "2.8"
@@ -14884,4 +14885,4 @@ cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and pyt
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12,<3.14"
-content-hash = "ef037f6d6085d26166d35c56ce266439f8f1a4fea90bc43ccf15cfeaf116cae5"
+content-hash = "545392e7d42765a78b7c765f18a34a9212e18c1300f2f291c768fe8b7a60bbf5"
