@@ -179,7 +179,7 @@ async def test_keycloak_callback_success_with_valid_offline_token(mock_request):
         patch('server.routes.auth.user_verifier') as mock_verifier,
         patch('server.routes.auth.set_response_cookie') as mock_set_cookie,
         patch('server.routes.auth.UserStore') as mock_user_store,
-        patch('server.routes.auth.posthog') as mock_posthog,
+        patch('server.routes.auth.get_analytics_service') as mock_get_analytics,
     ):
         # Mock user with accepted_tos
         mock_user = MagicMock()
@@ -230,7 +230,7 @@ async def test_keycloak_callback_success_with_valid_offline_token(mock_request):
             secure=False,
             accepted_tos=True,
         )
-        mock_posthog.set.assert_called_once()
+        mock_get_analytics.return_value.set_person_properties.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -344,7 +344,7 @@ async def test_keycloak_callback_success_without_offline_token(mock_request):
         patch('server.routes.auth.KEYCLOAK_REALM_NAME', 'test-realm'),
         patch('server.routes.auth.KEYCLOAK_CLIENT_ID', 'test-client'),
         patch('server.routes.auth.UserStore') as mock_user_store,
-        patch('server.routes.auth.posthog') as mock_posthog,
+        patch('server.routes.auth.get_analytics_service') as mock_get_analytics,
     ):
         # Mock user with accepted_tos
         mock_user = MagicMock()
@@ -398,7 +398,7 @@ async def test_keycloak_callback_success_without_offline_token(mock_request):
             secure=False,
             accepted_tos=True,
         )
-        mock_posthog.set.assert_called_once()
+        mock_get_analytics.return_value.set_person_properties.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -1178,7 +1178,7 @@ class TestKeycloakCallbackRecaptcha:
             patch('server.routes.auth.a_session_maker') as mock_session_maker,
             patch('server.routes.auth.domain_blocker') as mock_domain_blocker,
             patch('server.routes.auth.set_response_cookie'),
-            patch('server.routes.auth.posthog'),
+            patch('server.routes.auth.get_analytics_service', return_value=None),
             patch('server.routes.email.verify_email', new_callable=AsyncMock),
             patch('server.routes.auth.UserStore') as mock_user_store,
         ):
@@ -1328,7 +1328,7 @@ class TestKeycloakCallbackRecaptcha:
             patch('server.routes.auth.user_verifier') as mock_verifier,
             patch('server.routes.auth.a_session_maker') as mock_session_maker,
             patch('server.routes.auth.set_response_cookie'),
-            patch('server.routes.auth.posthog'),
+            patch('server.routes.auth.get_analytics_service', return_value=None),
             patch('server.routes.email.verify_email', new_callable=AsyncMock),
             patch('server.routes.auth.UserStore') as mock_user_store,
         ):
@@ -1417,7 +1417,7 @@ class TestKeycloakCallbackRecaptcha:
             patch('server.routes.auth.user_verifier') as mock_verifier,
             patch('server.routes.auth.a_session_maker') as mock_session_maker,
             patch('server.routes.auth.set_response_cookie'),
-            patch('server.routes.auth.posthog'),
+            patch('server.routes.auth.get_analytics_service', return_value=None),
             patch('server.routes.email.verify_email', new_callable=AsyncMock),
             patch('server.routes.auth.UserStore') as mock_user_store,
         ):
@@ -1503,7 +1503,7 @@ class TestKeycloakCallbackRecaptcha:
             patch('server.routes.auth.user_verifier') as mock_verifier,
             patch('server.routes.auth.a_session_maker') as mock_session_maker,
             patch('server.routes.auth.set_response_cookie'),
-            patch('server.routes.auth.posthog'),
+            patch('server.routes.auth.get_analytics_service', return_value=None),
             patch('server.routes.email.verify_email', new_callable=AsyncMock),
             patch('server.routes.auth.UserStore') as mock_user_store,
         ):
@@ -1588,7 +1588,7 @@ class TestKeycloakCallbackRecaptcha:
             patch('server.routes.auth.user_verifier') as mock_verifier,
             patch('server.routes.auth.a_session_maker') as mock_session_maker,
             patch('server.routes.auth.set_response_cookie'),
-            patch('server.routes.auth.posthog'),
+            patch('server.routes.auth.get_analytics_service', return_value=None),
             patch('server.routes.email.verify_email', new_callable=AsyncMock),
             patch('server.routes.auth.UserStore') as mock_user_store,
         ):
@@ -1670,7 +1670,7 @@ class TestKeycloakCallbackRecaptcha:
             patch('server.routes.auth.a_session_maker') as mock_session_maker,
             patch('server.routes.auth.domain_blocker') as mock_domain_blocker,
             patch('server.routes.auth.set_response_cookie'),
-            patch('server.routes.auth.posthog'),
+            patch('server.routes.auth.get_analytics_service', return_value=None),
             patch('server.routes.email.verify_email', new_callable=AsyncMock),
             patch('server.routes.auth.UserStore') as mock_user_store,
         ):
@@ -1738,7 +1738,7 @@ class TestKeycloakCallbackRecaptcha:
             patch('server.routes.auth.a_session_maker') as mock_session_maker,
             patch('server.routes.auth.domain_blocker') as mock_domain_blocker,
             patch('server.routes.auth.set_response_cookie'),
-            patch('server.routes.auth.posthog'),
+            patch('server.routes.auth.get_analytics_service', return_value=None),
             patch('server.routes.email.verify_email', new_callable=AsyncMock),
             patch('server.routes.auth.UserStore') as mock_user_store,
         ):
@@ -1812,7 +1812,7 @@ class TestKeycloakCallbackRecaptcha:
             patch('server.routes.auth.a_session_maker') as mock_session_maker,
             patch('server.routes.auth.domain_blocker') as mock_domain_blocker,
             patch('server.routes.auth.set_response_cookie'),
-            patch('server.routes.auth.posthog'),
+            patch('server.routes.auth.get_analytics_service', return_value=None),
             patch('server.routes.auth.logger') as mock_logger,
             patch('server.routes.auth.UserStore') as mock_user_store,
         ):
@@ -1963,7 +1963,7 @@ async def test_keycloak_callback_calls_backfill_user_email_for_existing_user(
         patch('server.routes.auth.user_verifier') as mock_verifier,
         patch('server.routes.auth.set_response_cookie'),
         patch('server.routes.auth.UserStore') as mock_user_store,
-        patch('server.routes.auth.posthog'),
+        patch('server.routes.auth.get_analytics_service', return_value=None),
     ):
         mock_user = MagicMock()
         mock_user.id = 'test_user_id'

@@ -29,9 +29,7 @@ billing_router = APIRouter(prefix='/api/billing', tags=['Billing'])
 
 
 async def validate_billing_enabled() -> None:
-    """
-    Validate that the billing feature flag is enabled
-    """
+    """Validate that the billing feature flag is enabled"""
     config = get_global_config()
     web_client_config = await config.web_client.get_web_client_config()
     if not web_client_config.feature_flags.enable_billing:
@@ -290,7 +288,9 @@ async def success_callback(session_id: str, request: Request):
         try:
             analytics = get_analytics_service()
             if analytics and user:
-                consented = user.user_consents_to_analytics is True  # None = undecided = not consented
+                consented = (
+                    user.user_consents_to_analytics is True
+                )  # None = undecided = not consented
                 analytics.capture(
                     distinct_id=billing_session.user_id,
                     event=analytics_constants.CREDIT_PURCHASED,

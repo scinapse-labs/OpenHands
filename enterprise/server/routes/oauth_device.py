@@ -334,7 +334,9 @@ async def device_verification_authenticated(
                     analytics.set_person_properties(
                         distinct_id=user_id,
                         properties={
-                            'org_id': str(user.current_org_id) if user.current_org_id else None,
+                            'org_id': str(user.current_org_id)
+                            if user.current_org_id
+                            else None,
                             'org_name': current_org.name if current_org else None,
                             'idp': 'device_auth',
                         },
@@ -346,7 +348,9 @@ async def device_verification_authenticated(
                         distinct_id=user_id,
                         event='user logged in',
                         properties={'idp': 'device_auth'},
-                        org_id=str(user.current_org_id) if user.current_org_id else None,
+                        org_id=str(user.current_org_id)
+                        if user.current_org_id
+                        else None,
                         consented=consented,
                     )
             except Exception:

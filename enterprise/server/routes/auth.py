@@ -258,14 +258,20 @@ async def keycloak_callback(
         try:
             analytics = get_analytics_service()
             if analytics:
-                consented = user.user_consents_to_analytics is True  # None = undecided = not consented
+                consented = (
+                    user.user_consents_to_analytics is True
+                )  # None = undecided = not consented
                 analytics.capture(
                     distinct_id=user_id,
                     event=analytics_constants.USER_SIGNED_UP,
                     properties={
                         'idp': user_info.get('identity_provider', 'keycloak'),
-                        'email_domain': email.split('@')[1] if email and '@' in email else None,
-                        'invitation_source': 'invitation' if invitation_token else 'self_signup',
+                        'email_domain': email.split('@')[1]
+                        if email and '@' in email
+                        else None,
+                        'invitation_source': 'invitation'
+                        if invitation_token
+                        else 'self_signup',
                     },
                     org_id=str(user.current_org_id) if user.current_org_id else None,
                     consented=consented,
@@ -428,7 +434,9 @@ async def keycloak_callback(
     # Server-side identity — full person and org group tracking via AnalyticsService
     analytics = get_analytics_service()
     if analytics:
-        consented = user.user_consents_to_analytics is True  # None = undecided = not consented
+        consented = (
+            user.user_consents_to_analytics is True
+        )  # None = undecided = not consented
 
         # Load current org for person properties
         from storage.org_store import OrgStore
@@ -445,7 +453,9 @@ async def keycloak_callback(
                 'org_id': str(user.current_org_id) if user.current_org_id else None,
                 'org_name': current_org.name if current_org else None,
                 'plan_tier': None,  # plan_tier not yet on Org model — deferred to future phase
-                'created_at': str(user.accepted_tos) if hasattr(user, 'accepted_tos') and user.accepted_tos else None,
+                'created_at': str(user.accepted_tos)
+                if hasattr(user, 'accepted_tos') and user.accepted_tos
+                else None,
                 'idp': idp,
                 'last_login_at': datetime.now(timezone.utc).isoformat(),
             },
@@ -454,7 +464,9 @@ async def keycloak_callback(
 
         # Group identify for all orgs the user belongs to
         # user.org_members is eagerly loaded via joinedload in UserStore.get_user_by_id_async
-        org_member_ids = [om.org_id for om in user.org_members] if user.org_members else []
+        org_member_ids = (
+            [om.org_id for om in user.org_members] if user.org_members else []
+        )
         user_orgs = await _get_user_orgs_with_data(user_id, org_member_ids)
 
         from storage.org_member_store import OrgMemberStore

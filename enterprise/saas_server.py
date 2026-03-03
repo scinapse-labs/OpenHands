@@ -12,6 +12,9 @@ import socketio  # noqa: E402
 from fastapi import Request, status  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import JSONResponse  # noqa: E402
+from server.app_lifespan.saas_app_lifespan_service import (  # noqa: E402
+    SaasAppLifespanService,
+)
 from server.auth.auth_error import ExpiredError, NoCredentialsError  # noqa: E402
 from server.auth.constants import (  # noqa: E402
     ENABLE_JIRA,
@@ -22,7 +25,10 @@ from server.auth.constants import (  # noqa: E402
 )
 from server.constants import PERMITTED_CORS_ORIGINS  # noqa: E402
 from server.logger import logger  # noqa: E402
-from server.middleware import PostHogSessionMiddleware, SetAuthCookieMiddleware  # noqa: E402
+from server.middleware import (  # noqa: E402
+    PostHogSessionMiddleware,
+    SetAuthCookieMiddleware,
+)
 from server.rate_limit import setup_rate_limit_handler  # noqa: E402
 from server.routes.api_keys import api_router as api_keys_router  # noqa: E402
 from server.routes.auth import api_router, oauth_router  # noqa: E402
@@ -30,7 +36,6 @@ from server.routes.billing import billing_router  # noqa: E402
 from server.routes.email import api_router as email_router  # noqa: E402
 from server.routes.event_webhook import event_webhook_router  # noqa: E402
 from server.routes.feedback import router as feedback_router  # noqa: E402
-from server.routes.onboarding import onboarding_router  # noqa: E402
 from server.routes.github_proxy import add_github_proxy_routes  # noqa: E402
 from server.routes.integration.jira import jira_integration_router  # noqa: E402
 from server.routes.integration.jira_dc import jira_dc_integration_router  # noqa: E402
@@ -38,6 +43,7 @@ from server.routes.integration.linear import linear_integration_router  # noqa: 
 from server.routes.integration.slack import slack_router  # noqa: E402
 from server.routes.mcp_patch import patch_mcp_server  # noqa: E402
 from server.routes.oauth_device import oauth_device_router  # noqa: E402
+from server.routes.onboarding import onboarding_router  # noqa: E402
 from server.routes.org_invitations import (  # noqa: E402
     accept_router as invitation_accept_router,
 )
@@ -65,9 +71,6 @@ from server.verified_models.verified_model_router import (  # noqa: E402
 # app.py reads get_app_lifespan_service() at module level (line ~69), so this
 # must execute first.
 from openhands.app_server.config import get_global_config  # noqa: E402
-from server.app_lifespan.saas_app_lifespan_service import (  # noqa: E402
-    SaasAppLifespanService,
-)
 
 _config = get_global_config()
 _config.lifespan = SaasAppLifespanService()
