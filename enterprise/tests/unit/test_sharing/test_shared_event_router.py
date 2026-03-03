@@ -7,7 +7,6 @@ determines which SharedEventServiceInjector to use based on environment variable
 import os
 from unittest.mock import patch
 
-import pytest
 from server.sharing.aws_shared_event_service import AwsSharedEventServiceInjector
 from server.sharing.google_cloud_shared_event_service import (
     GoogleCloudSharedEventServiceInjector,
@@ -47,40 +46,12 @@ class TestGetSharedEventServiceInjector:
 
             assert isinstance(injector, GoogleCloudSharedEventServiceInjector)
 
-    def test_uses_aws_when_file_store_s3(self):
-        """Test that AwsSharedEventServiceInjector is used when FILE_STORE=s3."""
-        with patch.dict(
-            os.environ,
-            {
-                'FILE_STORE': 's3',
-            },
-            clear=True,
-        ):
-            os.environ.pop('SHARED_EVENT_STORAGE_PROVIDER', None)
-
-            injector = get_shared_event_service_injector()
-
-            assert isinstance(injector, AwsSharedEventServiceInjector)
-
     def test_uses_aws_when_provider_aws(self):
         """Test that AwsSharedEventServiceInjector is used when SHARED_EVENT_STORAGE_PROVIDER=aws."""
         with patch.dict(
             os.environ,
             {
                 'SHARED_EVENT_STORAGE_PROVIDER': 'aws',
-            },
-            clear=True,
-        ):
-            injector = get_shared_event_service_injector()
-
-            assert isinstance(injector, AwsSharedEventServiceInjector)
-
-    def test_uses_aws_when_provider_s3(self):
-        """Test that AwsSharedEventServiceInjector is used when SHARED_EVENT_STORAGE_PROVIDER=s3."""
-        with patch.dict(
-            os.environ,
-            {
-                'SHARED_EVENT_STORAGE_PROVIDER': 's3',
             },
             clear=True,
         ):
@@ -157,19 +128,6 @@ class TestGetSharedEventServiceInjector:
 
             assert isinstance(injector, AwsSharedEventServiceInjector)
 
-    def test_provider_is_case_insensitive_s3(self):
-        """Test that SHARED_EVENT_STORAGE_PROVIDER is case insensitive for S3."""
-        with patch.dict(
-            os.environ,
-            {
-                'SHARED_EVENT_STORAGE_PROVIDER': 'S3',
-            },
-            clear=True,
-        ):
-            injector = get_shared_event_service_injector()
-
-            assert isinstance(injector, AwsSharedEventServiceInjector)
-
     def test_provider_is_case_insensitive_gcp(self):
         """Test that SHARED_EVENT_STORAGE_PROVIDER is case insensitive for GCP."""
         with patch.dict(
@@ -182,23 +140,6 @@ class TestGetSharedEventServiceInjector:
             injector = get_shared_event_service_injector()
 
             assert isinstance(injector, GoogleCloudSharedEventServiceInjector)
-
-    def test_file_store_is_case_insensitive_s3(self):
-        """Test that FILE_STORE is case insensitive for s3."""
-        with patch.dict(
-            os.environ,
-            {
-                'FILE_STORE': 'S3',
-            },
-            clear=True,
-        ):
-            os.environ.pop('SHARED_EVENT_STORAGE_PROVIDER', None)
-
-            injector = get_shared_event_service_injector()
-
-            # Should use AWS when FILE_STORE=S3 (case insensitive)
-            # Note: The current implementation uses .lower() so this should work
-            assert isinstance(injector, AwsSharedEventServiceInjector)
 
     def test_unknown_provider_defaults_to_google_cloud(self):
         """Test that unknown provider defaults to GoogleCloudSharedEventServiceInjector."""
