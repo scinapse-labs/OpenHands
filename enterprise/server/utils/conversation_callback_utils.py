@@ -119,6 +119,49 @@ async def process_event(
                                 org_id=org_id_str,
                                 consented=consented,
                             )
+
+                            # ACTV-01: user activated (first finished conversation only)
+                            if event.agent_state == AgentState.FINISHED:
+                                try:
+                                    from datetime import timezone
+                                    import uuid as _uuid
+                                    from sqlalchemy import func, select as sa_select
+                                    from storage.stored_conversation_metadata_saas import StoredConversationMetadataSaas
+
+                                    user_uuid = _uuid.UUID(user_id)
+                                    with session_maker() as act_session:
+                                        count_result = act_session.execute(
+                                            sa_select(func.count()).where(
+                                                StoredConversationMetadataSaas.user_id == user_uuid,
+                                                StoredConversationMetadataSaas.conversation_id != conversation_id,
+                                            )
+                                        )
+                                        prior_count = count_result.scalar()
+
+                                    if prior_count == 0:
+                                        tos_ts = user_obj.accepted_tos
+                                        if tos_ts is not None:
+                                            if tos_ts.tzinfo is None:
+                                                tos_ts = tos_ts.replace(tzinfo=timezone.utc)
+                                            from datetime import datetime
+                                            time_to_activate_seconds = (datetime.now(timezone.utc) - tos_ts).total_seconds()
+                                        else:
+                                            time_to_activate_seconds = None
+
+                                        analytics.capture(
+                                            distinct_id=user_id,
+                                            event=analytics_constants.USER_ACTIVATED,
+                                            properties={
+                                                'conversation_id': conversation_id,
+                                                'time_to_activate_seconds': time_to_activate_seconds,
+                                                'llm_model': conv_meta.llm_model if conv_meta else None,
+                                                'trigger': None,  # V0: trigger not available in callback context
+                                            },
+                                            org_id=org_id_str,
+                                            consented=consented,
+                                        )
+                                except Exception:
+                                    logger.exception('analytics:user_activated:v0:failed')
             except Exception:
                 logger.exception('analytics:v0_terminal_state:failed')
 

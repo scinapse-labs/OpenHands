@@ -294,6 +294,49 @@ async def on_event(
                                         org_id=org_id,
                                         consented=consented,
                                     )
+
+                                    # ACTV-01: user activated (first finished conversation only)
+                                    if exec_status == ConversationExecutionStatus.FINISHED:
+                                        try:
+                                            from datetime import datetime, timezone
+                                            import uuid as _uuid
+                                            from sqlalchemy import func, select as sa_select
+                                            from enterprise.storage.stored_conversation_metadata_saas import StoredConversationMetadataSaas
+                                            from enterprise.storage.database import a_session_maker
+
+                                            user_uuid = _uuid.UUID(sandbox_info.created_by_user_id)
+                                            async with a_session_maker() as act_session:
+                                                count_result = await act_session.execute(
+                                                    sa_select(func.count()).where(
+                                                        StoredConversationMetadataSaas.user_id == user_uuid,
+                                                        StoredConversationMetadataSaas.conversation_id != str(conversation_id),
+                                                    )
+                                                )
+                                                prior_count = count_result.scalar()
+
+                                            if prior_count == 0:
+                                                tos_ts = user_obj.accepted_tos
+                                                if tos_ts is not None:
+                                                    if tos_ts.tzinfo is None:
+                                                        tos_ts = tos_ts.replace(tzinfo=timezone.utc)
+                                                    time_to_activate_seconds = (datetime.now(timezone.utc) - tos_ts).total_seconds()
+                                                else:
+                                                    time_to_activate_seconds = None
+
+                                                analytics.capture(
+                                                    distinct_id=sandbox_info.created_by_user_id,
+                                                    event=analytics_constants.USER_ACTIVATED,
+                                                    properties={
+                                                        'conversation_id': str(conversation_id),
+                                                        'time_to_activate_seconds': time_to_activate_seconds,
+                                                        'llm_model': app_conversation_info.llm_model,
+                                                        'trigger': app_conversation_info.trigger.value if app_conversation_info.trigger else None,
+                                                    },
+                                                    org_id=org_id,
+                                                    consented=consented,
+                                                )
+                                        except Exception:
+                                            _logger.exception('analytics:user_activated:failed')
                 except Exception:
                     _logger.exception('analytics:conversation_terminal:failed')
 
