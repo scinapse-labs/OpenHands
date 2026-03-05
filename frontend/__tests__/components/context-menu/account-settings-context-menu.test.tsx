@@ -26,8 +26,9 @@ describe("AccountSettingsContextMenu", () => {
     return renderWithProviders(<MemoryRouter>{ui}</MemoryRouter>);
   };
 
-  const renderWithSaasConfig = (ui: React.ReactElement) => {
+  const renderWithSaasConfig = (ui: React.ReactElement, options?: { analyticsConsent?: boolean }) => {
     queryClient.setQueryData(["web-client-config"], createMockWebClientConfig({ app_mode: "saas" }));
+    queryClient.setQueryData(["settings"], { user_consents_to_analytics: options?.analyticsConsent ?? true });
     return render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>{ui}</MemoryRouter>
