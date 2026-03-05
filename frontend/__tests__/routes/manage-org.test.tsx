@@ -16,6 +16,7 @@ import OptionService from "#/api/option-service/option-service.api";
 import BillingService from "#/api/billing-service/billing-service.api";
 import { OrganizationMember } from "#/types/org";
 import { useSelectedOrganizationStore } from "#/stores/selected-organization-store";
+import { createMockWebClientConfig } from "#/mocks/settings-handlers";
 
 const mockQueryClient = vi.hoisted(() => {
   const { QueryClient } = require("@tanstack/react-query");
@@ -163,17 +164,21 @@ describe("Manage Org Route", () => {
     });
 
     const getConfigSpy = vi.spyOn(OptionService, "getConfig");
-    // @ts-expect-error - partial mock for testing
-    getConfigSpy.mockResolvedValue({
-      app_mode: "saas",
-      feature_flags: {
-        enable_billing: true, // Enable billing by default so billing UI is shown
-        hide_llm_settings: false,
-        enable_jira: false,
-        enable_jira_dc: false,
-        enable_linear: false,
-      },
-    });
+    getConfigSpy.mockResolvedValue(
+      createMockWebClientConfig({
+        app_mode: "saas",
+        feature_flags: {
+          enable_billing: true, // Enable billing by default so billing UI is shown
+          hide_llm_settings: false,
+          enable_jira: false,
+          enable_jira_dc: false,
+          enable_linear: false,
+          hide_users_page: false,
+          hide_billing_page: false,
+          hide_integrations_page: false,
+        },
+      }),
+    );
 
     // Set default mock for user (owner role has all permissions)
     setupUserMock(TEST_USERS.OWNER);
@@ -612,10 +617,11 @@ describe("Manage Org Route", () => {
       );
       const getConfigSpy = vi.spyOn(OptionService, "getConfig");
 
-      // @ts-expect-error - only return the properties we need for this test
-      getConfigSpy.mockResolvedValue({
-        app_mode: "saas", // required to enable getMe
-      });
+      getConfigSpy.mockResolvedValue(
+        createMockWebClientConfig({
+          app_mode: "saas", // required to enable getMe
+        }),
+      );
 
       renderManageOrg();
       await screen.findByTestId("manage-org-screen");
@@ -678,10 +684,11 @@ describe("Manage Org Route", () => {
       setupUserMock(TEST_USERS.ADMIN);
 
       const getConfigSpy = vi.spyOn(OptionService, "getConfig");
-      // @ts-expect-error - only return the properties we need for this test
-      getConfigSpy.mockResolvedValue({
-        app_mode: "saas", // required to enable getMe
-      });
+      getConfigSpy.mockResolvedValue(
+        createMockWebClientConfig({
+          app_mode: "saas", // required to enable getMe
+        }),
+      );
 
       renderManageOrg();
       await screen.findByTestId("manage-org-screen");
@@ -825,17 +832,21 @@ describe("Manage Org Route", () => {
     it("should show credits section when enable_billing is true", async () => {
       // Arrange
       const getConfigSpy = vi.spyOn(OptionService, "getConfig");
-      // @ts-expect-error - partial mock for testing
-      getConfigSpy.mockResolvedValue({
-        app_mode: "saas",
-        feature_flags: {
-          enable_billing: true,
-          hide_llm_settings: false,
-          enable_jira: false,
-          enable_jira_dc: false,
-          enable_linear: false,
-        },
-      });
+      getConfigSpy.mockResolvedValue(
+        createMockWebClientConfig({
+          app_mode: "saas",
+          feature_flags: {
+            enable_billing: true,
+            hide_llm_settings: false,
+            enable_jira: false,
+            enable_jira_dc: false,
+            enable_linear: false,
+            hide_users_page: false,
+            hide_billing_page: false,
+            hide_integrations_page: false,
+          },
+        }),
+      );
 
       // Act
       renderManageOrg();
@@ -853,17 +864,21 @@ describe("Manage Org Route", () => {
     it("should show organization name section when enable_billing is true", async () => {
       // Arrange
       const getConfigSpy = vi.spyOn(OptionService, "getConfig");
-      // @ts-expect-error - partial mock for testing
-      getConfigSpy.mockResolvedValue({
-        app_mode: "saas",
-        feature_flags: {
-          enable_billing: true,
-          hide_llm_settings: false,
-          enable_jira: false,
-          enable_jira_dc: false,
-          enable_linear: false,
-        },
-      });
+      getConfigSpy.mockResolvedValue(
+        createMockWebClientConfig({
+          app_mode: "saas",
+          feature_flags: {
+            enable_billing: true,
+            hide_llm_settings: false,
+            enable_jira: false,
+            enable_jira_dc: false,
+            enable_linear: false,
+            hide_users_page: false,
+            hide_billing_page: false,
+            hide_integrations_page: false,
+          },
+        }),
+      );
 
       // Act
       renderManageOrg();
@@ -881,17 +896,21 @@ describe("Manage Org Route", () => {
     it("should show Add Credits button when enable_billing is true", async () => {
       // Arrange
       const getConfigSpy = vi.spyOn(OptionService, "getConfig");
-      // @ts-expect-error - partial mock for testing
-      getConfigSpy.mockResolvedValue({
-        app_mode: "saas",
-        feature_flags: {
-          enable_billing: true,
-          hide_llm_settings: false,
-          enable_jira: false,
-          enable_jira_dc: false,
-          enable_linear: false,
-        },
-      });
+      getConfigSpy.mockResolvedValue(
+        createMockWebClientConfig({
+          app_mode: "saas",
+          feature_flags: {
+            enable_billing: true,
+            hide_llm_settings: false,
+            enable_jira: false,
+            enable_jira_dc: false,
+            enable_linear: false,
+            hide_users_page: false,
+            hide_billing_page: false,
+            hide_integrations_page: false,
+          },
+        }),
+      );
 
       // Act
       renderManageOrg();
@@ -910,17 +929,21 @@ describe("Manage Org Route", () => {
     it("should hide all billing-related elements when enable_billing is false", async () => {
       // Arrange
       const getConfigSpy = vi.spyOn(OptionService, "getConfig");
-      // @ts-expect-error - partial mock for testing
-      getConfigSpy.mockResolvedValue({
-        app_mode: "saas",
-        feature_flags: {
-          enable_billing: false,
-          hide_llm_settings: false,
-          enable_jira: false,
-          enable_jira_dc: false,
-          enable_linear: false,
-        },
-      });
+      getConfigSpy.mockResolvedValue(
+        createMockWebClientConfig({
+          app_mode: "saas",
+          feature_flags: {
+            enable_billing: false,
+            hide_llm_settings: false,
+            enable_jira: false,
+            enable_jira_dc: false,
+            enable_linear: false,
+            hide_users_page: false,
+            hide_billing_page: false,
+            hide_integrations_page: false,
+          },
+        }),
+      );
 
       // Act
       renderManageOrg();

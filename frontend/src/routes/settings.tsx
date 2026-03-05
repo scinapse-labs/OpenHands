@@ -13,6 +13,10 @@ import { getActiveOrganizationUser } from "#/utils/org/permission-checks";
 import { getSelectedOrganizationIdFromStore } from "#/stores/selected-organization-store";
 import { rolePermissions } from "#/utils/org/permissions";
 import { isBillingHidden } from "#/utils/org/billing-visibility";
+import {
+  isSettingsPageHidden,
+  getFirstAvailablePath,
+} from "#/utils/settings-utils";
 
 const SAAS_ONLY_PATHS = [
   "/settings/user",
@@ -26,8 +30,9 @@ const SAAS_ONLY_PATHS = [
 export const clientLoader = async ({ request }: Route.ClientLoaderArgs) => {
   const url = new URL(request.url);
   const { pathname } = url;
-  const user = await getActiveOrganizationUser();
+  console.log("clientLoader", { pathname });
 
+  // Step 1: Get config first (needed for all checks, no user data required)
   let config = queryClient.getQueryData<WebClientConfig>(["web-client-config"]);
   if (!config) {
     config = await OptionService.getConfig();
@@ -35,57 +40,76 @@ export const clientLoader = async ({ request }: Route.ClientLoaderArgs) => {
   }
 
   const isSaas = config?.app_mode === "saas";
+  const featureFlags = config?.feature_flags;
 
+  // Step 2: Check SAAS_ONLY_PATHS for OSS mode (no user data required)
   if (!isSaas && SAAS_ONLY_PATHS.includes(pathname)) {
-    // if in OSS mode, do not allow access to saas-only paths
     return redirect("/settings");
   }
-  // If LLM settings are hidden and user tries to access the LLM settings page
-  if (config?.feature_flags?.hide_llm_settings && pathname === "/settings") {
-    // Redirect to the first available settings page
-    return isSaas ? redirect("/settings/user") : redirect("/settings/mcp");
-  }
 
-  // Org-type detection for route protection
-  const orgId = getSelectedOrganizationIdFromStore();
-  const organizationsData = queryClient.getQueryData<{
-    items: Organization[];
-    currentOrgId: string | null;
-  }>(["organizations"]);
-  const selectedOrg = organizationsData?.items?.find((org) => org.id === orgId);
-  const isPersonalOrg = selectedOrg?.is_personal === true;
-  const isTeamOrg = !!selectedOrg && !selectedOrg.is_personal;
-
-  // Billing route protection
-  if (pathname === "/settings/billing") {
-    if (
-      !user ||
-      isBillingHidden(
-        config,
-        rolePermissions[user.role ?? "member"].includes("view_billing"),
-      ) ||
-      isTeamOrg
-    ) {
-      if (isSaas) {
-        return redirect("/settings/user");
-      }
+  // Step 3: Check feature flag-based hiding and redirect IMMEDIATELY (no user data required)
+  // This handles hide_llm_settings, hide_users_page, hide_billing_page, hide_integrations_page
+  if (isSettingsPageHidden(pathname, featureFlags)) {
+    const fallbackPath = getFirstAvailablePath(isSaas, featureFlags);
+    console.log("fallbackPath", fallbackPath);
+    if (fallbackPath && fallbackPath !== pathname) {
+      return redirect(fallbackPath);
     }
   }
 
-  // Org route protection: redirect if user lacks required permissions or personal org
-  if (pathname === "/settings/org" || pathname === "/settings/org-members") {
-    const role = user?.role ?? "member";
-    const requiredPermission =
-      pathname === "/settings/org"
-        ? "view_billing"
-        : "invite_user_to_organization";
+  // Step 4: For routes that need permission checks, get user data
+  // Only fetch user data for billing and org routes that need permission validation
+  if (
+    pathname === "/settings/billing" ||
+    pathname === "/settings/org" ||
+    pathname === "/settings/org-members"
+  ) {
+    const user = await getActiveOrganizationUser();
 
-    if (
-      !user ||
-      !rolePermissions[role].includes(requiredPermission) ||
-      isPersonalOrg
-    ) {
-      return redirect("/settings");
+    // Org-type detection for route protection
+    const orgId = getSelectedOrganizationIdFromStore();
+    const organizationsData = queryClient.getQueryData<{
+      items: Organization[];
+      currentOrgId: string | null;
+    }>(["organizations"]);
+    const selectedOrg = organizationsData?.items?.find(
+      (org) => org.id === orgId,
+    );
+    const isPersonalOrg = selectedOrg?.is_personal === true;
+    const isTeamOrg = !!selectedOrg && !selectedOrg.is_personal;
+
+    // Billing route protection
+    if (pathname === "/settings/billing") {
+      if (
+        !user ||
+        isBillingHidden(
+          config,
+          rolePermissions[user.role ?? "member"].includes("view_billing"),
+        ) ||
+        isTeamOrg
+      ) {
+        if (isSaas) {
+          const fallbackPath = getFirstAvailablePath(isSaas, featureFlags);
+          return redirect(fallbackPath ?? "/settings");
+        }
+      }
+    }
+
+    // Org route protection: redirect if user lacks required permissions or personal org
+    if (pathname === "/settings/org" || pathname === "/settings/org-members") {
+      const role = user?.role ?? "member";
+      const requiredPermission =
+        pathname === "/settings/org"
+          ? "view_billing"
+          : "invite_user_to_organization";
+
+      if (
+        !user ||
+        !rolePermissions[role].includes(requiredPermission) ||
+        isPersonalOrg
+      ) {
+        return redirect("/settings");
+      }
     }
   }
 

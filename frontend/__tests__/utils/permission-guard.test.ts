@@ -10,9 +10,45 @@ vi.mock("#/utils/org/permission-checks", () => ({
   getActiveOrganizationUser: vi.fn(),
 }));
 
+vi.mock("#/api/option-service/option-service.api", () => ({
+  default: {
+    getConfig: vi.fn().mockResolvedValue({
+      app_mode: "saas",
+      feature_flags: {
+        hide_users_page: false,
+        hide_billing_page: false,
+        hide_integrations_page: false,
+        hide_llm_settings: false,
+      },
+    }),
+  },
+}));
+
+const mockConfig = {
+  app_mode: "saas",
+  feature_flags: {
+    hide_users_page: false,
+    hide_billing_page: false,
+    hide_integrations_page: false,
+    hide_llm_settings: false,
+  },
+};
+
+vi.mock("#/query-client-config", () => ({
+  queryClient: {
+    getQueryData: vi.fn(() => mockConfig),
+    setQueryData: vi.fn(),
+  },
+}));
+
 // Import after mocks are set up
 import { createPermissionGuard } from "#/utils/org/permission-guard";
 import { getActiveOrganizationUser } from "#/utils/org/permission-checks";
+
+// Helper to create a mock request
+const createMockRequest = (pathname: string = "/settings/billing") => ({
+  request: new Request(`http://localhost${pathname}`),
+});
 
 describe("createPermissionGuard", () => {
   beforeEach(() => {
@@ -41,9 +77,9 @@ describe("createPermissionGuard", () => {
 
       // Act
       const guard = createPermissionGuard("view_billing");
-      await guard();
+      await guard(createMockRequest("/settings/billing"));
 
-      // Assert: should redirect to /settings/user
+      // Assert: should redirect to first available path (/settings/user in SaaS mode)
       expect(redirect).toHaveBeenCalledWith("/settings/user");
     });
 
@@ -64,7 +100,7 @@ describe("createPermissionGuard", () => {
 
       // Act
       const guard = createPermissionGuard("view_billing");
-      const result = await guard();
+      const result = await guard(createMockRequest("/settings/billing"));
 
       // Assert: should not redirect, return null
       expect(redirect).not.toHaveBeenCalled();
@@ -77,9 +113,9 @@ describe("createPermissionGuard", () => {
 
       // Act
       const guard = createPermissionGuard("view_billing");
-      await guard();
+      await guard(createMockRequest("/settings/billing"));
 
-      // Assert: should redirect to /settings/user
+      // Assert: should redirect to first available path
       expect(redirect).toHaveBeenCalledWith("/settings/user");
     });
 
@@ -90,7 +126,7 @@ describe("createPermissionGuard", () => {
 
       // Act
       const guard = createPermissionGuard("manage_secrets");
-      await guard();
+      await guard(createMockRequest("/settings/secrets"));
 
       // Assert: should redirect, not silently grant member-level access
       expect(redirect).toHaveBeenCalledWith("/settings/user");
@@ -115,10 +151,25 @@ describe("createPermissionGuard", () => {
 
       // Act
       const guard = createPermissionGuard("view_billing", "/custom/redirect");
-      await guard();
+      await guard(createMockRequest("/settings/billing"));
 
       // Assert: should redirect to custom path
       expect(redirect).toHaveBeenCalledWith("/custom/redirect");
+    });
+  });
+
+  describe("infinite loop prevention", () => {
+    it("should return null instead of redirecting when fallback path equals current path", async () => {
+      // Arrange: no user
+      vi.mocked(getActiveOrganizationUser).mockResolvedValue(undefined);
+
+      // Act: access /settings/user when fallback would also be /settings/user
+      const guard = createPermissionGuard("view_billing");
+      const result = await guard(createMockRequest("/settings/user"));
+
+      // Assert: should NOT redirect to avoid infinite loop
+      expect(redirect).not.toHaveBeenCalled();
+      expect(result).toBeNull();
     });
   });
 });

@@ -1,31 +1,65 @@
 import { redirect } from "react-router";
+import OptionService from "#/api/option-service/option-service.api";
+import { WebClientConfig } from "#/api/option-service/option.types";
+import { queryClient } from "#/query-client-config";
+import { getFirstAvailablePath } from "#/utils/settings-utils";
 import { getActiveOrganizationUser } from "./permission-checks";
 import { PermissionKey, rolePermissions } from "./permissions";
 
 /**
+ * Gets the appropriate fallback path for permission denied scenarios.
+ * Respects feature flags to avoid redirecting to hidden pages.
+ */
+async function getPermissionDeniedFallback(): Promise<string> {
+  let config = queryClient.getQueryData<WebClientConfig>(["web-client-config"]);
+  if (!config) {
+    config = await OptionService.getConfig();
+    queryClient.setQueryData<WebClientConfig>(["web-client-config"], config);
+  }
+
+  const isSaas = config?.app_mode === "saas";
+  const featureFlags = config?.feature_flags;
+
+  // Get first available path that respects feature flags
+  const fallbackPath = getFirstAvailablePath(isSaas, featureFlags);
+  return fallbackPath ?? "/settings";
+}
+
+/**
  * Creates a clientLoader guard that checks if the user has the required permission.
- * Redirects to the fallback path if permission is denied.
+ * Redirects to the first available settings page if permission is denied.
  *
  * @param requiredPermission - The permission key to check
- * @param redirectPath - The path to redirect to if permission denied (default: /settings/user)
+ * @param customRedirectPath - Optional custom path to redirect to (will still respect feature flags if not provided)
  * @returns A clientLoader function that can be exported from route files
  */
 export const createPermissionGuard =
-  (
-    requiredPermission: PermissionKey,
-    redirectPath: string = "/settings/user",
-  ) =>
-  async () => {
+  (requiredPermission: PermissionKey, customRedirectPath?: string) =>
+  async ({ request }: { request: Request }) => {
     const user = await getActiveOrganizationUser();
 
-    if (!user) {
+    const url = new URL(request.url);
+    const currentPath = url.pathname;
+
+    // Helper to get redirect response, avoiding infinite loops
+    const getRedirectResponse = async () => {
+      const redirectPath =
+        customRedirectPath ?? (await getPermissionDeniedFallback());
+      // Don't redirect to the same path to avoid infinite loops
+      if (redirectPath === currentPath) {
+        return null;
+      }
       return redirect(redirectPath);
+    };
+
+    if (!user) {
+      return getRedirectResponse();
     }
 
     const userRole = user.role ?? "member";
 
     if (!rolePermissions[userRole].includes(requiredPermission)) {
-      return redirect(redirectPath);
+      return getRedirectResponse();
     }
 
     return null;

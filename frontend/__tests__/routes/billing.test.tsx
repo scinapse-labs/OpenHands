@@ -8,6 +8,7 @@ import OptionService from "#/api/option-service/option-service.api";
 import { OrganizationMember } from "#/types/org";
 import * as orgStore from "#/stores/selected-organization-store";
 import { organizationService } from "#/api/organization-service/organization-service.api";
+import { createMockWebClientConfig } from "#/mocks/settings-handlers";
 
 // Mock the i18next hook
 vi.mock("react-i18next", async () => {
@@ -89,19 +90,22 @@ describe("Billing Route", () => {
   };
 
   const setupSaasMode = (featureFlags = {}) => {
-    // @ts-expect-error - partial mock for testing
-    vi.spyOn(OptionService, "getConfig").mockResolvedValue({
-      app_mode: "saas",
-      posthog_client_key: "test",
-      feature_flags: {
-        enable_billing: false,
-        hide_llm_settings: false,
-        enable_jira: false,
-        enable_jira_dc: false,
-        enable_linear: false,
-        ...featureFlags,
-      },
-    });
+    vi.spyOn(OptionService, "getConfig").mockResolvedValue(
+      createMockWebClientConfig({
+        app_mode: "saas",
+        feature_flags: {
+          enable_billing: false,
+          hide_llm_settings: false,
+          enable_jira: false,
+          enable_jira_dc: false,
+          enable_linear: false,
+          hide_users_page: false,
+          hide_billing_page: false,
+          hide_integrations_page: false,
+          ...featureFlags,
+        },
+      }),
+    );
   };
 
   beforeEach(() => {

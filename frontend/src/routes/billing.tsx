@@ -16,26 +16,33 @@ import { isBillingHidden } from "#/utils/org/billing-visibility";
 import { queryClient } from "#/query-client-config";
 import OptionService from "#/api/option-service/option-service.api";
 import { WebClientConfig } from "#/api/option-service/option.types";
+import { getFirstAvailablePath } from "#/utils/settings-utils";
 
 export const clientLoader = async () => {
-  const user = await getActiveOrganizationUser();
-
-  if (!user) {
-    return redirect("/settings/user");
-  }
-
-  const userRole = user.role ?? "member";
-
   let config = queryClient.getQueryData<WebClientConfig>(["web-client-config"]);
   if (!config) {
     config = await OptionService.getConfig();
     queryClient.setQueryData<WebClientConfig>(["web-client-config"], config);
   }
 
+  const isSaas = config?.app_mode === "saas";
+  const featureFlags = config?.feature_flags;
+
+  const getFallbackPath = () =>
+    getFirstAvailablePath(isSaas, featureFlags) ?? "/settings";
+
+  const user = await getActiveOrganizationUser();
+
+  if (!user) {
+    return redirect(getFallbackPath());
+  }
+
+  const userRole = user.role ?? "member";
+
   if (
     isBillingHidden(config, rolePermissions[userRole].includes("view_billing"))
   ) {
-    return redirect("/settings/user");
+    return redirect(getFallbackPath());
   }
 
   return null;

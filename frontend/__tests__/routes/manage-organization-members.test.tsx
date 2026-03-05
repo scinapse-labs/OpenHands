@@ -18,6 +18,7 @@ import {
 } from "#/mocks/org-handlers";
 import OptionService from "#/api/option-service/option-service.api";
 import { useSelectedOrganizationStore } from "#/stores/selected-organization-store";
+import { createMockWebClientConfig } from "#/mocks/settings-handlers";
 
 const mockQueryClient = vi.hoisted(() => {
   const { QueryClient } = require("@tanstack/react-query");
@@ -99,17 +100,21 @@ describe("Manage Organization Members Route", () => {
     });
 
     const getConfigSpy = vi.spyOn(OptionService, "getConfig");
-    // @ts-expect-error - partial mock for testing
-    getConfigSpy.mockResolvedValue({
-      app_mode: "saas",
-      feature_flags: {
-        enable_billing: true,
-        hide_llm_settings: false,
-        enable_jira: false,
-        enable_jira_dc: false,
-        enable_linear: false,
-      },
-    });
+    getConfigSpy.mockResolvedValue(
+      createMockWebClientConfig({
+        app_mode: "saas",
+        feature_flags: {
+          enable_billing: true,
+          hide_llm_settings: false,
+          enable_jira: false,
+          enable_jira_dc: false,
+          enable_linear: false,
+          hide_users_page: false,
+          hide_billing_page: false,
+          hide_integrations_page: false,
+        },
+      }),
+    );
 
     queryClient = new QueryClient();
 

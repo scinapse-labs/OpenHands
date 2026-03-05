@@ -16,6 +16,7 @@ import { SAAS_NAV_ITEMS, OSS_NAV_ITEMS } from "#/constants/settings-nav";
 import OptionService from "#/api/option-service/option-service.api";
 import { OrganizationMember } from "#/types/org";
 import { useSelectedOrganizationStore } from "#/stores/selected-organization-store";
+import { createMockWebClientConfig } from "#/mocks/settings-handlers";
 
 type UserContextMenuProps = GetComponentPropTypes<typeof UserContextMenu>;
 
@@ -129,18 +130,21 @@ describe("UserContextMenu", () => {
   });
 
   it("should render navigation items from SAAS_NAV_ITEMS (except organization-members/org)", async () => {
-    // @ts-expect-error - partial mock for testing
-    vi.spyOn(OptionService, "getConfig").mockResolvedValue({
-      app_mode: "saas",
-      posthog_client_key: "test",
-      feature_flags: {
-        enable_billing: true,
-        hide_llm_settings: false,
-        enable_jira: false,
-        enable_jira_dc: false,
-        enable_linear: false,
-      },
-    });
+    vi.spyOn(OptionService, "getConfig").mockResolvedValue(
+      createMockWebClientConfig({
+        app_mode: "saas",
+        feature_flags: {
+          enable_billing: true,
+          hide_llm_settings: false,
+          enable_jira: false,
+          enable_jira_dc: false,
+          enable_linear: false,
+          hide_users_page: false,
+          hide_billing_page: false,
+          hide_integrations_page: false,
+        },
+      }),
+    );
 
     renderUserContextMenu({ type: "member", onClose: vi.fn });
 
@@ -160,18 +164,21 @@ describe("UserContextMenu", () => {
   });
 
   it("should render navigation items from SAAS_NAV_ITEMS when user role is admin (except organization-members/org)", async () => {
-    // @ts-expect-error - partial mock for testing
-    vi.spyOn(OptionService, "getConfig").mockResolvedValue({
-      app_mode: "saas",
-      posthog_client_key: "test",
-      feature_flags: {
-        enable_billing: true,
-        hide_llm_settings: false,
-        enable_jira: false,
-        enable_jira_dc: false,
-        enable_linear: false,
-      },
-    });
+    vi.spyOn(OptionService, "getConfig").mockResolvedValue(
+      createMockWebClientConfig({
+        app_mode: "saas",
+        feature_flags: {
+          enable_billing: true,
+          hide_llm_settings: false,
+          enable_jira: false,
+          enable_jira_dc: false,
+          enable_linear: false,
+          hide_users_page: false,
+          hide_billing_page: false,
+          hide_integrations_page: false,
+        },
+      }),
+    );
 
     seedActiveUser({ role: "admin" });
 
@@ -207,18 +214,21 @@ describe("UserContextMenu", () => {
 
   describe("OSS mode", () => {
     beforeEach(() => {
-      // @ts-expect-error - partial mock for testing
-      vi.spyOn(OptionService, "getConfig").mockResolvedValue({
-        app_mode: "oss",
-        posthog_client_key: "test",
-        feature_flags: {
-          enable_billing: false,
-          hide_llm_settings: false,
-          enable_jira: false,
-          enable_jira_dc: false,
-          enable_linear: false,
-        },
-      });
+      vi.spyOn(OptionService, "getConfig").mockResolvedValue(
+        createMockWebClientConfig({
+          app_mode: "oss",
+          feature_flags: {
+            enable_billing: false,
+            hide_llm_settings: false,
+            enable_jira: false,
+            enable_jira_dc: false,
+            enable_linear: false,
+            hide_users_page: false,
+            hide_billing_page: false,
+            hide_integrations_page: false,
+          },
+        }),
+      );
     });
 
     it("should render OSS_NAV_ITEMS when in OSS mode", async () => {
@@ -254,18 +264,21 @@ describe("UserContextMenu", () => {
 
   describe("HIDE_LLM_SETTINGS feature flag", () => {
     it("should hide LLM settings link when HIDE_LLM_SETTINGS is true", async () => {
-      // @ts-expect-error - partial mock for testing
-      vi.spyOn(OptionService, "getConfig").mockResolvedValue({
-        app_mode: "saas",
-        posthog_client_key: "test",
-        feature_flags: {
-          enable_billing: false,
-          hide_llm_settings: true,
-          enable_jira: false,
-          enable_jira_dc: false,
-          enable_linear: false,
-        },
-      });
+      vi.spyOn(OptionService, "getConfig").mockResolvedValue(
+        createMockWebClientConfig({
+          app_mode: "saas",
+          feature_flags: {
+            enable_billing: false,
+            hide_llm_settings: true,
+            enable_jira: false,
+            enable_jira_dc: false,
+            enable_linear: false,
+            hide_users_page: false,
+            hide_billing_page: false,
+            hide_integrations_page: false,
+          },
+        }),
+      );
 
       renderUserContextMenu({ type: "member", onClose: vi.fn });
 
@@ -280,18 +293,21 @@ describe("UserContextMenu", () => {
     });
 
     it("should show LLM settings link when HIDE_LLM_SETTINGS is false", async () => {
-      // @ts-expect-error - partial mock for testing
-      vi.spyOn(OptionService, "getConfig").mockResolvedValue({
-        app_mode: "saas",
-        posthog_client_key: "test",
-        feature_flags: {
-          enable_billing: false,
-          hide_llm_settings: false,
-          enable_jira: false,
-          enable_jira_dc: false,
-          enable_linear: false,
-        },
-      });
+      vi.spyOn(OptionService, "getConfig").mockResolvedValue(
+        createMockWebClientConfig({
+          app_mode: "saas",
+          feature_flags: {
+            enable_billing: false,
+            hide_llm_settings: false,
+            enable_jira: false,
+            enable_jira_dc: false,
+            enable_linear: false,
+            hide_users_page: false,
+            hide_billing_page: false,
+            hide_integrations_page: false,
+          },
+        }),
+      );
 
       renderUserContextMenu({ type: "member", onClose: vi.fn });
 
@@ -332,18 +348,21 @@ describe("UserContextMenu", () => {
   });
 
   it("should have correct navigation links for nav items", async () => {
-    // @ts-expect-error - partial mock for testing
-    vi.spyOn(OptionService, "getConfig").mockResolvedValue({
-      app_mode: "saas",
-      posthog_client_key: "test",
-      feature_flags: {
-        enable_billing: true, // Enable billing so billing link is shown
-        hide_llm_settings: false,
-        enable_jira: false,
-        enable_jira_dc: false,
-        enable_linear: false,
-      },
-    });
+    vi.spyOn(OptionService, "getConfig").mockResolvedValue(
+      createMockWebClientConfig({
+        app_mode: "saas",
+        feature_flags: {
+          enable_billing: true, // Enable billing so billing link is shown
+          hide_llm_settings: false,
+          enable_jira: false,
+          enable_jira_dc: false,
+          enable_linear: false,
+          hide_users_page: false,
+          hide_billing_page: false,
+          hide_integrations_page: false,
+        },
+      }),
+    );
 
     seedActiveUser({ role: "admin" });
 
