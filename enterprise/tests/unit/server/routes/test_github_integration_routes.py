@@ -6,15 +6,18 @@ received from the client.
 
 These tests import and test the actual github_events endpoint from
 server.routes.integration.github, mocking only external dependencies.
+
+Note: The github module uses lazy initialization for external dependencies,
+so it can be imported directly without requiring environment variables.
 """
 
 import hashlib
 import hmac
-import importlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import Request
+from server.routes.integration.github import github_events
 from starlette.requests import ClientDisconnect
 
 
@@ -36,30 +39,21 @@ def create_valid_signature(payload: bytes, secret: str = 'test-secret') -> str:
     return f'sha256={signature}'
 
 
-def get_github_module():
-    """Import the github module dynamically.
-
-    This ensures conftest.py environment variables are set before the module loads.
-    """
-    return importlib.import_module('server.routes.integration.github')
-
-
 class TestClientDisconnect:
     """Test cases for ClientDisconnect handling in github_events endpoint."""
 
     @pytest.mark.asyncio
     @patch('server.routes.integration.github.logger')
-    @patch('server.routes.integration.github.GITHUB_WEBHOOKS_ENABLED', True)
-    async def test_client_disconnect_returns_499(self, mock_logger, mock_request):
+    @patch('server.routes.integration.github._is_webhooks_enabled', return_value=True)
+    async def test_client_disconnect_returns_499(
+        self, mock_webhooks_enabled, mock_logger, mock_request
+    ):
         """Test that ClientDisconnect is caught and returns 499 status code.
 
         This tests the scenario where the FastAPI endpoint times out before
         the request body can be fully received, causing starlette to raise
         ClientDisconnect.
         """
-        github_module = get_github_module()
-        github_events = github_module.github_events
-
         # Create a mock request that raises ClientDisconnect when body() is called
         # This simulates what happens when the client disconnects or times out
         mock_request.body = AsyncMock(side_effect=ClientDisconnect())
@@ -76,14 +70,11 @@ class TestClientDisconnect:
     @pytest.mark.asyncio
     @patch('server.routes.integration.github.logger')
     @patch('server.routes.integration.github.verify_github_signature')
-    @patch('server.routes.integration.github.GITHUB_WEBHOOKS_ENABLED', True)
+    @patch('server.routes.integration.github._is_webhooks_enabled', return_value=True)
     async def test_client_disconnect_during_json_parsing(
-        self, mock_verify_sig, mock_logger, mock_request
+        self, mock_webhooks_enabled, mock_verify_sig, mock_logger, mock_request
     ):
         """Test ClientDisconnect during request.json() call returns 499."""
-        github_module = get_github_module()
-        github_events = github_module.github_events
-
         payload = b'{"test": "data"}'
         mock_request.body = AsyncMock(return_value=payload)
         # ClientDisconnect can also happen during json parsing
@@ -100,14 +91,11 @@ class TestClientDisconnect:
 
     @pytest.mark.asyncio
     @patch('server.routes.integration.github.logger')
-    @patch('server.routes.integration.github.GITHUB_WEBHOOKS_ENABLED', True)
+    @patch('server.routes.integration.github._is_webhooks_enabled', return_value=True)
     async def test_client_disconnect_does_not_propagate_as_unhandled_exception(
-        self, mock_logger, mock_request
+        self, mock_webhooks_enabled, mock_logger, mock_request
     ):
         """Test that ClientDisconnect doesn't cause unhandled exception logging."""
-        github_module = get_github_module()
-        github_events = github_module.github_events
-
         mock_request.body = AsyncMock(side_effect=ClientDisconnect())
 
         # The function should return normally without raising
@@ -124,18 +112,15 @@ class TestClientDisconnect:
 
     @pytest.mark.asyncio
     @patch('server.routes.integration.github.logger')
-    @patch('server.routes.integration.github.GITHUB_WEBHOOKS_ENABLED', True)
+    @patch('server.routes.integration.github._is_webhooks_enabled', return_value=True)
     async def test_client_disconnect_is_not_caught_by_generic_exception_handler(
-        self, mock_logger, mock_request
+        self, mock_webhooks_enabled, mock_logger, mock_request
     ):
         """Test that ClientDisconnect is caught by its specific handler, not the generic one.
 
         The generic exception handler returns 400 and logs with exception().
         ClientDisconnect should return 499 and log with debug().
         """
-        github_module = get_github_module()
-        github_events = github_module.github_events
-
         mock_request.body = AsyncMock(side_effect=ClientDisconnect())
 
         response = await github_events(
@@ -156,12 +141,11 @@ class TestWebhooksDisabled:
 
     @pytest.mark.asyncio
     @patch('server.routes.integration.github.logger')
-    @patch('server.routes.integration.github.GITHUB_WEBHOOKS_ENABLED', False)
-    async def test_webhooks_disabled_returns_200(self, mock_logger, mock_request):
+    @patch('server.routes.integration.github._is_webhooks_enabled', return_value=False)
+    async def test_webhooks_disabled_returns_200(
+        self, mock_webhooks_enabled, mock_logger, mock_request
+    ):
         """Test that disabled webhooks return 200 with appropriate message."""
-        github_module = get_github_module()
-        github_events = github_module.github_events
-
         response = await github_events(
             request=mock_request,
             x_hub_signature_256='sha256=test',
@@ -175,22 +159,26 @@ class TestSuccessfulRequest:
     """Test cases for successful webhook processing."""
 
     @pytest.mark.asyncio
-    @patch('server.routes.integration.github.github_manager')
+    @patch('server.routes.integration.github._get_github_manager')
     @patch('server.routes.integration.github.verify_github_signature')
     @patch('server.routes.integration.github.logger')
-    @patch('server.routes.integration.github.GITHUB_WEBHOOKS_ENABLED', True)
+    @patch('server.routes.integration.github._is_webhooks_enabled', return_value=True)
     async def test_successful_request_returns_200(
-        self, mock_logger, mock_verify_sig, mock_github_manager, mock_request
+        self,
+        mock_webhooks_enabled,
+        mock_logger,
+        mock_verify_sig,
+        mock_get_github_manager,
+        mock_request,
     ):
         """Test that a successful request returns 200."""
-        github_module = get_github_module()
-        github_events = github_module.github_events
-
         payload = b'{"installation": {"id": 123}}'
         mock_request.body = AsyncMock(return_value=payload)
         mock_request.json = AsyncMock(return_value={'installation': {'id': 123}})
         mock_verify_sig.return_value = None
+        mock_github_manager = MagicMock()
         mock_github_manager.receive_message = AsyncMock()
+        mock_get_github_manager.return_value = mock_github_manager
 
         response = await github_events(
             request=mock_request,
@@ -203,14 +191,11 @@ class TestSuccessfulRequest:
     @pytest.mark.asyncio
     @patch('server.routes.integration.github.verify_github_signature')
     @patch('server.routes.integration.github.logger')
-    @patch('server.routes.integration.github.GITHUB_WEBHOOKS_ENABLED', True)
+    @patch('server.routes.integration.github._is_webhooks_enabled', return_value=True)
     async def test_missing_installation_id_returns_400(
-        self, mock_logger, mock_verify_sig, mock_request
+        self, mock_webhooks_enabled, mock_logger, mock_verify_sig, mock_request
     ):
         """Test that missing installation ID returns 400."""
-        github_module = get_github_module()
-        github_events = github_module.github_events
-
         payload = b'{"action": "opened"}'
         mock_request.body = AsyncMock(return_value=payload)
         mock_request.json = AsyncMock(return_value={'action': 'opened'})
