@@ -6,7 +6,7 @@ import os
 import zipfile
 from datetime import datetime
 from unittest.mock import ANY, AsyncMock, Mock, patch
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 from pydantic import SecretStr
@@ -1102,11 +1102,12 @@ class TestLiveStatusAppConversationService:
 
         workspace = LocalWorkspace(working_dir='/test')
         secrets = {'test': StaticSecret(value='secret')}
+        conversation_id = uuid4()
 
         # Act
         result = await self.service._finalize_conversation_request(
             mock_agent,
-            None,
+            conversation_id,
             self.mock_user,
             workspace,
             None,
@@ -1119,7 +1120,7 @@ class TestLiveStatusAppConversationService:
 
         # Assert
         assert isinstance(result, StartConversationRequest)
-        assert isinstance(result.conversation_id, UUID)
+        assert result.conversation_id == conversation_id
 
     @pytest.mark.asyncio
     async def test_finalize_conversation_request_skills_loading_fails(self):
