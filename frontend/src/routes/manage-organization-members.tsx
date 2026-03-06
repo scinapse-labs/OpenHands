@@ -137,18 +137,17 @@ function ManageOrganizationMembers() {
         {hasPermissionToInvite && (
           <BrandButton
             type="button"
-            variant="secondary"
+            variant="primary"
             onClick={() => setInviteModalOpen(true)}
-            className="flex items-center gap-1 rounded-full border-none text-sm text-white font-medium leading-5 bg-org-button hover:opacity-80 p-2"
+            startContent={<Plus size={14} />}
           >
-            <Plus size={14} />
             {t(I18nKey.ORG$INVITE_ORG_MEMBERS)}
           </BrandButton>
         )}
       </div>
 
       {/* Email Search Input */}
-      <div className="rounded w-80 p-3 placeholder:text-tertiary-alt bg-modal-input border-none flex items-center gap-2 mb-4">
+      <div className="rounded-sm w-80 h-10 p-2 bg-tertiary border border-[#717888] flex items-center gap-2 mb-4">
         <Search size={16} className="text-tertiary-alt" />
         <input
           data-testid="email-filter-input"
@@ -156,7 +155,7 @@ function ManageOrganizationMembers() {
           value={emailFilter}
           placeholder={t(I18nKey.ORG$SEARCH_BY_EMAIL)}
           onChange={(e) => setEmailFilter(e.target.value)}
-          className="w-full text-sm leading-4 font-normal outline-none bg-transparent"
+          className="w-full leading-4 font-normal bg-transparent placeholder:italic placeholder:text-tertiary-alt outline-none"
         />
         {isFetching && debouncedEmailFilter && (
           <LoaderCircle
