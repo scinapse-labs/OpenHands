@@ -582,3 +582,219 @@ class TestIdentifyUser:
         _, kwargs = mock_client.group_identify.call_args
         props = kwargs.get('properties', {})
         assert props.get('org_name') is None
+
+
+# ---------------------------------------------------------------------------
+# Typed event methods tests
+# ---------------------------------------------------------------------------
+
+
+class TestTypedEventMethods:
+    """Tests for the 10 typed event methods on AnalyticsService."""
+
+    def test_track_user_signed_up(self, saas_service):
+        """track_user_signed_up calls capture with USER_SIGNED_UP and correct properties."""
+        service, mock_client = saas_service
+        service.track_user_signed_up(
+            distinct_id='user-1',
+            idp='github',
+            email_domain='example.com',
+            invitation_source='invite_link',
+        )
+        mock_client.capture.assert_called_once()
+        _, kwargs = mock_client.capture.call_args
+        assert kwargs['event'] == USER_SIGNED_UP
+        props = kwargs['properties']
+        assert props['idp'] == 'github'
+        assert props['email_domain'] == 'example.com'
+        assert props['invitation_source'] == 'invite_link'
+
+    def test_track_user_logged_in(self, saas_service):
+        """track_user_logged_in calls capture with USER_LOGGED_IN and correct properties."""
+        service, mock_client = saas_service
+        service.track_user_logged_in(
+            distinct_id='user-1',
+            idp='google',
+        )
+        mock_client.capture.assert_called_once()
+        _, kwargs = mock_client.capture.call_args
+        assert kwargs['event'] == USER_LOGGED_IN
+        props = kwargs['properties']
+        assert props['idp'] == 'google'
+
+    def test_track_conversation_created(self, saas_service):
+        """track_conversation_created calls capture with CONVERSATION_CREATED and correct properties."""
+        service, mock_client = saas_service
+        service.track_conversation_created(
+            distinct_id='user-1',
+            conversation_id='conv-abc',
+            trigger='ui',
+            llm_model='gpt-4',
+            agent_type='CodeActAgent',
+            has_repository=True,
+        )
+        mock_client.capture.assert_called_once()
+        _, kwargs = mock_client.capture.call_args
+        assert kwargs['event'] == CONVERSATION_CREATED
+        props = kwargs['properties']
+        assert props['conversation_id'] == 'conv-abc'
+        assert props['trigger'] == 'ui'
+        assert props['llm_model'] == 'gpt-4'
+        assert props['agent_type'] == 'CodeActAgent'
+        assert props['has_repository'] is True
+
+    def test_track_conversation_finished(self, saas_service):
+        """track_conversation_finished calls capture with CONVERSATION_FINISHED and correct properties."""
+        service, mock_client = saas_service
+        service.track_conversation_finished(
+            distinct_id='user-1',
+            conversation_id='conv-abc',
+            terminal_state='completed',
+            turn_count=5,
+            accumulated_cost_usd=0.15,
+            prompt_tokens=1000,
+            completion_tokens=500,
+            llm_model='gpt-4',
+            trigger='ui',
+        )
+        mock_client.capture.assert_called_once()
+        _, kwargs = mock_client.capture.call_args
+        assert kwargs['event'] == CONVERSATION_FINISHED
+        props = kwargs['properties']
+        assert props['conversation_id'] == 'conv-abc'
+        assert props['terminal_state'] == 'completed'
+        assert props['turn_count'] == 5
+        assert props['accumulated_cost_usd'] == 0.15
+        assert props['prompt_tokens'] == 1000
+        assert props['completion_tokens'] == 500
+        assert props['llm_model'] == 'gpt-4'
+        assert props['trigger'] == 'ui'
+
+    def test_track_conversation_errored(self, saas_service):
+        """track_conversation_errored calls capture with CONVERSATION_ERRORED and correct properties."""
+        service, mock_client = saas_service
+        service.track_conversation_errored(
+            distinct_id='user-1',
+            conversation_id='conv-abc',
+            error_type='LLMError',
+            error_message='Rate limit exceeded',
+            llm_model='gpt-4',
+            turn_count=3,
+            terminal_state='error',
+        )
+        mock_client.capture.assert_called_once()
+        _, kwargs = mock_client.capture.call_args
+        assert kwargs['event'] == CONVERSATION_ERRORED
+        props = kwargs['properties']
+        assert props['conversation_id'] == 'conv-abc'
+        assert props['error_type'] == 'LLMError'
+        assert props['error_message'] == 'Rate limit exceeded'
+        assert props['llm_model'] == 'gpt-4'
+        assert props['turn_count'] == 3
+        assert props['terminal_state'] == 'error'
+
+    def test_track_credit_purchased(self, saas_service):
+        """track_credit_purchased calls capture with CREDIT_PURCHASED and correct properties."""
+        service, mock_client = saas_service
+        service.track_credit_purchased(
+            distinct_id='user-1',
+            amount_usd=10.0,
+            credit_balance_before=5.0,
+            credit_balance_after=15.0,
+        )
+        mock_client.capture.assert_called_once()
+        _, kwargs = mock_client.capture.call_args
+        assert kwargs['event'] == CREDIT_PURCHASED
+        props = kwargs['properties']
+        assert props['amount_usd'] == 10.0
+        assert props['credit_balance_before'] == 5.0
+        assert props['credit_balance_after'] == 15.0
+
+    def test_track_credit_limit_reached(self, saas_service):
+        """track_credit_limit_reached calls capture with CREDIT_LIMIT_REACHED and correct properties."""
+        service, mock_client = saas_service
+        service.track_credit_limit_reached(
+            distinct_id='user-1',
+            conversation_id='conv-abc',
+            credit_balance=0.0,
+            llm_model='gpt-4',
+        )
+        mock_client.capture.assert_called_once()
+        _, kwargs = mock_client.capture.call_args
+        assert kwargs['event'] == CREDIT_LIMIT_REACHED
+        props = kwargs['properties']
+        assert props['conversation_id'] == 'conv-abc'
+        assert props['credit_balance'] == 0.0
+        assert props['llm_model'] == 'gpt-4'
+
+    def test_track_user_activated(self, saas_service):
+        """track_user_activated calls capture with USER_ACTIVATED and correct properties."""
+        service, mock_client = saas_service
+        service.track_user_activated(
+            distinct_id='user-1',
+            conversation_id='conv-abc',
+            time_to_activate_seconds=120.5,
+            llm_model='gpt-4',
+            trigger='webhook',
+        )
+        mock_client.capture.assert_called_once()
+        _, kwargs = mock_client.capture.call_args
+        assert kwargs['event'] == USER_ACTIVATED
+        props = kwargs['properties']
+        assert props['conversation_id'] == 'conv-abc'
+        assert props['time_to_activate_seconds'] == 120.5
+        assert props['llm_model'] == 'gpt-4'
+        assert props['trigger'] == 'webhook'
+
+    def test_track_git_provider_connected(self, saas_service):
+        """track_git_provider_connected calls capture with GIT_PROVIDER_CONNECTED and correct properties."""
+        service, mock_client = saas_service
+        service.track_git_provider_connected(
+            distinct_id='user-1',
+            provider_type='github',
+        )
+        mock_client.capture.assert_called_once()
+        _, kwargs = mock_client.capture.call_args
+        assert kwargs['event'] == GIT_PROVIDER_CONNECTED
+        props = kwargs['properties']
+        assert props['provider_type'] == 'github'
+
+    def test_track_onboarding_completed(self, saas_service):
+        """track_onboarding_completed calls capture with ONBOARDING_COMPLETED and correct properties."""
+        service, mock_client = saas_service
+        service.track_onboarding_completed(
+            distinct_id='user-1',
+            role='developer',
+            org_size='11-50',
+            use_case='code_review',
+        )
+        mock_client.capture.assert_called_once()
+        _, kwargs = mock_client.capture.call_args
+        assert kwargs['event'] == ONBOARDING_COMPLETED
+        props = kwargs['properties']
+        assert props['role'] == 'developer'
+        assert props['org_size'] == '11-50'
+        assert props['use_case'] == 'code_review'
+
+    def test_typed_method_consent_false_is_noop(self, saas_service):
+        """A typed method with consented=False results in no capture call."""
+        service, mock_client = saas_service
+        service.track_user_logged_in(
+            distinct_id='user-1',
+            idp='github',
+            consented=False,
+        )
+        mock_client.capture.assert_not_called()
+
+    def test_typed_method_passes_org_id(self, saas_service):
+        """A typed method passes org_id through to self.capture."""
+        service, mock_client = saas_service
+        service.track_user_logged_in(
+            distinct_id='user-1',
+            idp='github',
+            org_id='org-99',
+        )
+        mock_client.capture.assert_called_once()
+        _, kwargs = mock_client.capture.call_args
+        props = kwargs['properties']
+        assert props.get('org_id') == 'org-99'
