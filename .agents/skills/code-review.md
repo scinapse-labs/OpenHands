@@ -34,7 +34,7 @@ You are reviewing code for OpenHands Web UI. Follow these guidelines:
 
 - **[DESCRIPTION]**: Does the PR description match the changes?
 - **[DOCUMENTATION]**: Does the change require documentation, and if so was the change documented?
-- **[TESTING]**: Is the issue reproducible? Was the fix tested? 
+- **[TESTING]**: Is the issue reproducible? Was the fix tested?
 
 ## Repository Conventions
 
