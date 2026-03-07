@@ -28,6 +28,7 @@ from openhands.app_server.sandbox.sandbox_models import (
     SandboxPage,
     SandboxStatus,
 )
+from openhands.app_server.user.specifiy_user_context import SpecifyUserContext
 
 
 @pytest.fixture
@@ -92,6 +93,7 @@ def mock_running_container():
     container.name = 'oh-test-abc123'
     container.status = 'running'
     container.image.tags = ['spec456']
+    container.labels = {}
     container.attrs = {
         'Created': '2024-01-15T10:30:00.000000000Z',
         'Config': {
@@ -115,6 +117,7 @@ def mock_paused_container():
     container.name = 'oh-test-def456'
     container.status = 'paused'
     container.image.tags = ['spec456']
+    container.labels = {}
     container.attrs = {
         'Created': '2024-01-15T10:30:00.000000000Z',
         'Config': {'Env': []},
@@ -1541,3 +1544,213 @@ class TestDockerSandboxServiceHostNetwork:
 
         # Verify no warning was logged about port collision
         mock_logger.warning.assert_not_called()
+
+
+class TestDockerSandboxServiceCreatedByUserId:
+    """Tests for created_by_user_id handling in DockerSandboxService."""
+
+    async def test_container_to_sandbox_info_reads_user_id_from_labels(
+        self,
+        mock_sandbox_spec_service,
+        mock_httpx_client,
+        mock_docker_client,
+    ):
+        """Test that _container_to_sandbox_info reads created_by_user_id from container labels."""
+        # Arrange
+        user_context = SpecifyUserContext(user_id=None)
+        service = DockerSandboxService(
+            sandbox_spec_service=mock_sandbox_spec_service,
+            container_name_prefix='oh-test-',
+            host_port=3000,
+            container_url_pattern='http://localhost:{port}',
+            mounts=[],
+            exposed_ports=[
+                ExposedPort(
+                    name=AGENT_SERVER, description='Agent server', container_port=8000
+                ),
+            ],
+            health_check_path='/health',
+            httpx_client=mock_httpx_client,
+            max_num_sandboxes=3,
+            docker_client=mock_docker_client,
+            user_context=user_context,
+        )
+
+        mock_container = MagicMock()
+        mock_container.name = 'oh-test-abc123'
+        mock_container.status = 'paused'
+        mock_container.image.tags = ['test-image:latest']
+        mock_container.labels = {'created_by_user_id': 'user-123-456'}
+        mock_container.attrs = {
+            'Created': '2024-01-15T10:30:00.000000000Z',
+            'Config': {'Env': []},
+            'NetworkSettings': {'Ports': {}},
+        }
+
+        # Act
+        result = await service._container_to_sandbox_info(mock_container)
+
+        # Assert
+        assert result is not None
+        assert result.created_by_user_id == 'user-123-456'
+
+    async def test_container_to_sandbox_info_handles_missing_labels(
+        self,
+        mock_sandbox_spec_service,
+        mock_httpx_client,
+        mock_docker_client,
+    ):
+        """Test that _container_to_sandbox_info handles containers without created_by_user_id label."""
+        # Arrange
+        user_context = SpecifyUserContext(user_id=None)
+        service = DockerSandboxService(
+            sandbox_spec_service=mock_sandbox_spec_service,
+            container_name_prefix='oh-test-',
+            host_port=3000,
+            container_url_pattern='http://localhost:{port}',
+            mounts=[],
+            exposed_ports=[
+                ExposedPort(
+                    name=AGENT_SERVER, description='Agent server', container_port=8000
+                ),
+            ],
+            health_check_path='/health',
+            httpx_client=mock_httpx_client,
+            max_num_sandboxes=3,
+            docker_client=mock_docker_client,
+            user_context=user_context,
+        )
+
+        mock_container = MagicMock()
+        mock_container.name = 'oh-test-abc123'
+        mock_container.status = 'paused'
+        mock_container.image.tags = ['test-image:latest']
+        mock_container.labels = {}  # No labels
+        mock_container.attrs = {
+            'Created': '2024-01-15T10:30:00.000000000Z',
+            'Config': {'Env': []},
+            'NetworkSettings': {'Ports': {}},
+        }
+
+        # Act
+        result = await service._container_to_sandbox_info(mock_container)
+
+        # Assert
+        assert result is not None
+        assert result.created_by_user_id is None
+
+    @patch('base62.encodebytes')
+    @patch('os.urandom')
+    async def test_start_sandbox_stores_user_id_in_labels(
+        self,
+        mock_urandom,
+        mock_encodebytes,
+        mock_sandbox_spec_service,
+        mock_httpx_client,
+        mock_docker_client,
+    ):
+        """Test that start_sandbox stores user_id in container labels when user is authenticated."""
+        # Arrange
+        mock_urandom.side_effect = [b'container_id', b'session_key']
+        mock_encodebytes.side_effect = ['test_container_id', 'test_session_key']
+
+        user_context = SpecifyUserContext(user_id='user-abc-123')
+        service = DockerSandboxService(
+            sandbox_spec_service=mock_sandbox_spec_service,
+            container_name_prefix='oh-test-',
+            host_port=3000,
+            container_url_pattern='http://localhost:{port}',
+            mounts=[],
+            exposed_ports=[
+                ExposedPort(
+                    name=AGENT_SERVER, description='Agent server', container_port=8000
+                ),
+            ],
+            health_check_path='/health',
+            httpx_client=mock_httpx_client,
+            max_num_sandboxes=3,
+            docker_client=mock_docker_client,
+            user_context=user_context,
+        )
+
+        mock_container = MagicMock()
+        mock_container.name = 'oh-test-test_container_id'
+        mock_container.status = 'running'
+        mock_container.image.tags = ['test-image:latest']
+        mock_container.labels = {'created_by_user_id': 'user-abc-123'}
+        mock_container.attrs = {
+            'Created': '2024-01-15T10:30:00.000000000Z',
+            'Config': {
+                'Env': ['OH_SESSION_API_KEYS_0=test_session_key'],
+                'WorkingDir': '/workspace',
+            },
+            'NetworkSettings': {'Ports': {'8000/tcp': [{'HostPort': '12345'}]}},
+        }
+        mock_docker_client.containers.run.return_value = mock_container
+
+        # Act
+        with patch.object(service, 'pause_old_sandboxes', return_value=[]):
+            await service.start_sandbox()
+
+        # Assert
+        call_kwargs = mock_docker_client.containers.run.call_args[1]
+        assert 'labels' in call_kwargs
+        assert call_kwargs['labels']['created_by_user_id'] == 'user-abc-123'
+
+    @patch('base62.encodebytes')
+    @patch('os.urandom')
+    async def test_start_sandbox_omits_user_id_label_when_no_user(
+        self,
+        mock_urandom,
+        mock_encodebytes,
+        mock_sandbox_spec_service,
+        mock_httpx_client,
+        mock_docker_client,
+    ):
+        """Test that start_sandbox does not add created_by_user_id label when user_id is None."""
+        # Arrange
+        mock_urandom.side_effect = [b'container_id', b'session_key']
+        mock_encodebytes.side_effect = ['test_container_id', 'test_session_key']
+
+        user_context = SpecifyUserContext(user_id=None)
+        service = DockerSandboxService(
+            sandbox_spec_service=mock_sandbox_spec_service,
+            container_name_prefix='oh-test-',
+            host_port=3000,
+            container_url_pattern='http://localhost:{port}',
+            mounts=[],
+            exposed_ports=[
+                ExposedPort(
+                    name=AGENT_SERVER, description='Agent server', container_port=8000
+                ),
+            ],
+            health_check_path='/health',
+            httpx_client=mock_httpx_client,
+            max_num_sandboxes=3,
+            docker_client=mock_docker_client,
+            user_context=user_context,
+        )
+
+        mock_container = MagicMock()
+        mock_container.name = 'oh-test-test_container_id'
+        mock_container.status = 'running'
+        mock_container.image.tags = ['test-image:latest']
+        mock_container.labels = {}
+        mock_container.attrs = {
+            'Created': '2024-01-15T10:30:00.000000000Z',
+            'Config': {
+                'Env': ['OH_SESSION_API_KEYS_0=test_session_key'],
+                'WorkingDir': '/workspace',
+            },
+            'NetworkSettings': {'Ports': {'8000/tcp': [{'HostPort': '12345'}]}},
+        }
+        mock_docker_client.containers.run.return_value = mock_container
+
+        # Act
+        with patch.object(service, 'pause_old_sandboxes', return_value=[]):
+            await service.start_sandbox()
+
+        # Assert
+        call_kwargs = mock_docker_client.containers.run.call_args[1]
+        assert 'labels' in call_kwargs
+        assert 'created_by_user_id' not in call_kwargs['labels']
