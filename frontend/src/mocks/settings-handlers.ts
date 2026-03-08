@@ -3,6 +3,83 @@ import { WebClientConfig } from "#/api/option-service/option.types";
 import { DEFAULT_SETTINGS } from "#/services/settings";
 import { Provider, Settings } from "#/types/settings";
 
+const MOCK_SDK_SETTINGS_SCHEMA: NonNullable<Settings["sdk_settings_schema"]> = {
+  model_name: "SDKSettings",
+  sections: [
+    {
+      key: "llm",
+      label: "LLM",
+      fields: [
+        {
+          key: "llm_model",
+          label: "Model",
+          widget: "text",
+          section: "llm",
+          section_label: "LLM",
+          order: 10,
+          default: DEFAULT_SETTINGS.llm_model,
+          choices: [],
+          depends_on: [],
+          advanced: false,
+          secret: false,
+          required: true,
+        },
+        {
+          key: "llm_api_key",
+          label: "API key",
+          widget: "password",
+          section: "llm",
+          section_label: "LLM",
+          order: 20,
+          default: null,
+          choices: [],
+          depends_on: [],
+          advanced: false,
+          secret: true,
+          required: false,
+        },
+      ],
+    },
+    {
+      key: "critic",
+      label: "Critic",
+      fields: [
+        {
+          key: "enable_critic",
+          label: "Enable critic",
+          widget: "boolean",
+          section: "critic",
+          section_label: "Critic",
+          order: 10,
+          default: false,
+          choices: [],
+          depends_on: [],
+          advanced: false,
+          secret: false,
+          required: true,
+        },
+        {
+          key: "critic_mode",
+          label: "Critic mode",
+          widget: "select",
+          section: "critic",
+          section_label: "Critic",
+          order: 20,
+          default: "finish_and_message",
+          choices: [
+            { label: "finish_and_message", value: "finish_and_message" },
+            { label: "all_actions", value: "all_actions" },
+          ],
+          depends_on: ["enable_critic"],
+          advanced: true,
+          secret: false,
+          required: true,
+        },
+      ],
+    },
+  ],
+};
+
 export const MOCK_DEFAULT_USER_SETTINGS: Settings = {
   llm_model: DEFAULT_SETTINGS.llm_model,
   llm_base_url: DEFAULT_SETTINGS.llm_base_url,
@@ -24,6 +101,13 @@ export const MOCK_DEFAULT_USER_SETTINGS: Settings = {
   enable_solvability_analysis: DEFAULT_SETTINGS.enable_solvability_analysis,
   user_consents_to_analytics: DEFAULT_SETTINGS.user_consents_to_analytics,
   max_budget_per_task: DEFAULT_SETTINGS.max_budget_per_task,
+  sdk_settings_schema: MOCK_SDK_SETTINGS_SCHEMA,
+  sdk_settings_values: {
+    critic_mode: "finish_and_message",
+    enable_critic: false,
+    llm_api_key: null,
+    llm_model: DEFAULT_SETTINGS.llm_model,
+  },
 };
 
 const MOCK_USER_PREFERENCES: {
@@ -108,16 +192,37 @@ export const SETTINGS_HANDLERS = [
 
   http.post("/api/settings", async ({ request }) => {
     await delay();
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown> | null;
 
     if (body) {
       const current = MOCK_USER_PREFERENCES.settings || {
         ...MOCK_DEFAULT_USER_SETTINGS,
       };
+      const sdkFieldKeys = new Set(
+        current.sdk_settings_schema?.sections.flatMap((section) =>
+          section.fields.map((field) => field.key),
+        ) ?? [],
+      );
+      const sdkSettingsValues = {
+        ...(current.sdk_settings_values ?? {}),
+      };
+
+      for (const [key, value] of Object.entries(body)) {
+        if (sdkFieldKeys.has(key)) {
+          sdkSettingsValues[key] =
+            typeof value === "boolean" ||
+            typeof value === "number" ||
+            typeof value === "string" ||
+            value === null
+              ? value
+              : null;
+        }
+      }
 
       MOCK_USER_PREFERENCES.settings = {
         ...current,
         ...(body as Partial<Settings>),
+        sdk_settings_values: sdkSettingsValues,
       };
 
       return HttpResponse.json(null, { status: 200 });

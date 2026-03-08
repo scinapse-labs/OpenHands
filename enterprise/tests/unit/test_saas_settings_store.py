@@ -118,6 +118,10 @@ async def test_store_and_load_keycloak_user(settings_store):
         agent='smith',
         email='test@example.com',
         email_verified=True,
+        sdk_settings_values={
+            'critic_mode': 'all_actions',
+            'enable_critic': True,
+        },
     )
 
     await settings_store.store(settings)
@@ -125,6 +129,10 @@ async def test_store_and_load_keycloak_user(settings_store):
     # Load and verify settings
     loaded_settings = await settings_store.load()
     assert loaded_settings is not None
+    assert loaded_settings.sdk_settings_values == {
+        'critic_mode': 'all_actions',
+        'enable_critic': True,
+    }
     assert loaded_settings.llm_api_key.get_secret_value() == 'secret_key'
     assert loaded_settings.agent == 'smith'
 

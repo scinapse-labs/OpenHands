@@ -7,7 +7,6 @@ from openhands.core.config.llm_config import LLMConfig
 from openhands.core.config.openhands_config import OpenHandsConfig
 from openhands.core.config.sandbox_config import SandboxConfig
 from openhands.core.config.security_config import SecurityConfig
-from openhands.server.routes.settings import convert_to_settings
 from openhands.storage.data_models.settings import Settings
 
 
@@ -91,14 +90,20 @@ def test_settings_handles_sensitive_data():
     assert settings.llm_api_key.get_secret_value() == 'test-key'
 
 
-def test_convert_to_settings():
-    settings_with_token_data = Settings(
+def test_settings_preserve_sdk_settings_values():
+    settings = Settings(
         llm_api_key='test-key',
+        sdk_settings_values={
+            'enable_critic': True,
+            'critic_mode': 'all_actions',
+        },
     )
 
-    settings = convert_to_settings(settings_with_token_data)
-
     assert settings.llm_api_key.get_secret_value() == 'test-key'
+    assert settings.sdk_settings_values == {
+        'enable_critic': True,
+        'critic_mode': 'all_actions',
+    }
 
 
 def test_settings_no_pydantic_frozen_field_warning():
