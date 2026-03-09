@@ -1,6 +1,5 @@
 from typing import Callable, cast
 
-from enterprise.server.utils.url_utils import get_cookie_domain, get_cookie_samesite
 import jwt
 from fastapi import Request, Response, status
 from fastapi.responses import JSONResponse
@@ -15,6 +14,7 @@ from server.auth.gitlab_sync import schedule_gitlab_repo_sync
 from server.auth.saas_user_auth import SaasUserAuth, token_manager
 from server.routes.auth import set_response_cookie
 
+from enterprise.server.utils.url_utils import get_cookie_domain, get_cookie_samesite
 from openhands.core.logger import openhands_logger as logger
 from openhands.server.user_auth.user_auth import AuthType, UserAuth, get_user_auth
 from openhands.server.utils import config
