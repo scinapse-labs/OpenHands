@@ -335,7 +335,8 @@ async def cancel_callback(session_id: str, request: Request):
 
 def _get_base_url(request: Request) -> URL:
     # Never send any part of the credit card process over a non secure connection
-    base_url = request.base_url
-    if base_url.hostname != 'localhost':
-        base_url = base_url.replace(scheme='https')
-    return base_url
+    web_url = get_global_config().web_url
+    if not web_url:
+        scheme = 'http' if request.url.hostname == 'localhost' else 'https'
+        web_url = f'{scheme}://{request.url.netloc}'
+    return web_url
