@@ -6213,8 +6213,8 @@ wsproto = ">=1.2.0"
 [package.source]
 type = "git"
 url = "https://github.com/OpenHands/software-agent-sdk"
-reference = "e346ea2812c213f6300a3608652edad366364034"
-resolved_reference = "e346ea2812c213f6300a3608652edad366364034"
+reference = "e68d1eec53fd68af2cf373edef018a91a2bc2aed"
+resolved_reference = "e68d1eec53fd68af2cf373edef018a91a2bc2aed"
 subdirectory = "openhands-agent-server"
 
 [[package]]
@@ -6241,7 +6241,7 @@ deprecation = ">=2.1"
 dirhash = "*"
 docker = "*"
 fastapi = "*"
-fastmcp = ">=3"
+fastmcp = ">=3,<4"
 google-api-python-client = ">=2.164"
 google-auth-httplib2 = "*"
 google-auth-oauthlib = "*"
@@ -6264,9 +6264,9 @@ memory-profiler = ">=0.61"
 numpy = "*"
 openai = "2.8"
 openhands-aci = "0.3.3"
-openhands-agent-server = {git = "https://github.com/OpenHands/software-agent-sdk", rev = "e346ea2812c213f6300a3608652edad366364034", subdirectory = "openhands-agent-server"}
-openhands-sdk = {git = "https://github.com/OpenHands/software-agent-sdk", rev = "e346ea2812c213f6300a3608652edad366364034", subdirectory = "openhands-sdk"}
-openhands-tools = {git = "https://github.com/OpenHands/software-agent-sdk", rev = "e346ea2812c213f6300a3608652edad366364034", subdirectory = "openhands-tools"}
+openhands-agent-server = {git = "https://github.com/OpenHands/software-agent-sdk", rev = "e68d1eec53fd68af2cf373edef018a91a2bc2aed", subdirectory = "openhands-agent-server"}
+openhands-sdk = {git = "https://github.com/OpenHands/software-agent-sdk", rev = "e68d1eec53fd68af2cf373edef018a91a2bc2aed", subdirectory = "openhands-sdk"}
+openhands-tools = {git = "https://github.com/OpenHands/software-agent-sdk", rev = "e68d1eec53fd68af2cf373edef018a91a2bc2aed", subdirectory = "openhands-tools"}
 opentelemetry-api = ">=1.33.1"
 opentelemetry-exporter-otlp-proto-grpc = ">=1.33.1"
 pathspec = ">=0.12.1"
@@ -6349,8 +6349,8 @@ boto3 = ["boto3 (>=1.35.0)"]
 [package.source]
 type = "git"
 url = "https://github.com/OpenHands/software-agent-sdk"
-reference = "e346ea2812c213f6300a3608652edad366364034"
-resolved_reference = "e346ea2812c213f6300a3608652edad366364034"
+reference = "e68d1eec53fd68af2cf373edef018a91a2bc2aed"
+resolved_reference = "e68d1eec53fd68af2cf373edef018a91a2bc2aed"
 subdirectory = "openhands-sdk"
 
 [[package]]
@@ -6377,8 +6377,8 @@ tom-swe = ">=1.0.3"
 [package.source]
 type = "git"
 url = "https://github.com/OpenHands/software-agent-sdk"
-reference = "e346ea2812c213f6300a3608652edad366364034"
-resolved_reference = "e346ea2812c213f6300a3608652edad366364034"
+reference = "e68d1eec53fd68af2cf373edef018a91a2bc2aed"
+resolved_reference = "e68d1eec53fd68af2cf373edef018a91a2bc2aed"
 subdirectory = "openhands-tools"
 
 [[package]]
