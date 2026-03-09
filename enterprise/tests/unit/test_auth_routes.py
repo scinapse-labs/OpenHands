@@ -11,7 +11,6 @@ from server.auth.auth_error import AuthError
 from server.auth.saas_user_auth import SaasUserAuth
 from server.auth.user.user_authorizer import UserAuthorizationResponse, UserAuthorizer
 from server.routes.auth import (
-    _extract_recaptcha_state,
     accept_tos,
     authenticate,
     keycloak_callback,
@@ -1034,79 +1033,6 @@ async def test_keycloak_callback_no_email_in_user_info(
         assert result.status_code == 302
         # Should not check for duplicate when email is missing
         mock_token_manager.check_duplicate_base_email.assert_not_called()
-
-
-class TestExtractRecaptchaState:
-    """Tests for _extract_recaptcha_state() helper function."""
-
-    def test_should_extract_redirect_url_and_token_from_new_json_format(self):
-        """Test extraction from new base64-encoded JSON format."""
-        # Arrange
-        state_data = {
-            'redirect_url': 'https://example.com',
-            'recaptcha_token': 'test-token',
-        }
-        encoded_state = base64.urlsafe_b64encode(
-            json.dumps(state_data).encode()
-        ).decode()
-
-        # Act
-        redirect_url, token = _extract_recaptcha_state(encoded_state)
-
-        # Assert
-        assert redirect_url == 'https://example.com'
-        assert token == 'test-token'
-
-    def test_should_handle_old_format_plain_redirect_url(self):
-        """Test handling of old format (plain redirect URL string)."""
-        # Arrange
-        state = 'https://example.com'
-
-        # Act
-        redirect_url, token = _extract_recaptcha_state(state)
-
-        # Assert
-        assert redirect_url == 'https://example.com'
-        assert token is None
-
-    def test_should_handle_none_state(self):
-        """Test handling of None state."""
-        # Arrange
-        state = None
-
-        # Act
-        redirect_url, token = _extract_recaptcha_state(state)
-
-        # Assert
-        assert redirect_url == ''
-        assert token is None
-
-    def test_should_handle_invalid_base64_gracefully(self):
-        """Test handling of invalid base64/JSON (fallback to old format)."""
-        # Arrange
-        state = 'not-valid-base64!!!'
-
-        # Act
-        redirect_url, token = _extract_recaptcha_state(state)
-
-        # Assert
-        assert redirect_url == state
-        assert token is None
-
-    def test_should_handle_missing_redirect_url_in_json(self):
-        """Test handling when redirect_url is missing in JSON."""
-        # Arrange
-        state_data = {'recaptcha_token': 'test-token'}
-        encoded_state = base64.urlsafe_b64encode(
-            json.dumps(state_data).encode()
-        ).decode()
-
-        # Act
-        redirect_url, token = _extract_recaptcha_state(encoded_state)
-
-        # Assert
-        assert redirect_url == ''
-        assert token == 'test-token'
 
 
 class TestKeycloakCallbackRecaptcha:
