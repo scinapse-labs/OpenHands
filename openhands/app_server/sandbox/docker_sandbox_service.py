@@ -35,7 +35,6 @@ from openhands.app_server.sandbox.sandbox_service import (
 )
 from openhands.app_server.sandbox.sandbox_spec_service import SandboxSpecService
 from openhands.app_server.services.injector import InjectorState
-from openhands.app_server.user.user_context import UserContext
 from openhands.app_server.utils.docker_utils import (
     replace_localhost_hostname_for_docker,
 )
@@ -81,7 +80,6 @@ class DockerSandboxService(SandboxService):
     health_check_path: str | None
     httpx_client: httpx.AsyncClient
     max_num_sandboxes: int
-    user_context: UserContext | None = None
     web_url: str | None = None
     extra_hosts: dict[str, str] = field(default_factory=dict)
     docker_client: docker.DockerClient = field(default_factory=get_docker_client)
@@ -199,13 +197,9 @@ class DockerSandboxService(SandboxService):
                                     )
                                 )
 
-        # Get user_id from container labels
-        labels = container.labels if isinstance(container.labels, dict) else {}
-        created_by_user_id = labels.get('created_by_user_id')
-
         return SandboxInfo(
             id=container.name,
-            created_by_user_id=created_by_user_id,
+            created_by_user_id=None,
             sandbox_spec_id=container.image.tags[0],
             status=status,
             session_api_key=session_api_key,
@@ -382,28 +376,15 @@ class DockerSandboxService(SandboxService):
         # Prepare environment variables
         env_vars = sandbox_spec.initial_env.copy()
         env_vars[SESSION_API_KEY_VARIABLE] = session_api_key
-
-        # Determine the webhook callback URL. For Docker containers, we use
-        # host.docker.internal to reach the host machine. If webhook_base_url is
-        # provided (derived from the incoming request), extract the port from it.
-        # Otherwise, fall back to the configured host_port.
-        webhook_port = self.host_port
-        if webhook_base_url:
-            from urllib.parse import urlparse
-
-            parsed = urlparse(webhook_base_url)
-            if parsed.port:
-                webhook_port = parsed.port
-
         env_vars[WEBHOOK_CALLBACK_VARIABLE] = (
-            f'http://host.docker.internal:{webhook_port}/api/v1/webhooks'
+            f'http://host.docker.internal:{self.host_port}/api/v1/webhooks'
         )
 
-        # Set CORS origins for remote browser access.
-        # Use webhook_base_url if provided (from request), fall back to web_url.
-        cors_origin = webhook_base_url or self.web_url
-        if cors_origin:
-            env_vars[ALLOW_CORS_ORIGINS_VARIABLE] = cors_origin
+        # Set CORS origins for remote browser access when web_url is configured.
+        # This allows the agent-server container to accept requests from the
+        # frontend when running OpenHands on a remote machine.
+        if self.web_url:
+            env_vars[ALLOW_CORS_ORIGINS_VARIABLE] = self.web_url
 
         # Prepare port mappings and add port environment variables
         # When using host network, container ports are directly accessible on the host
@@ -421,17 +402,10 @@ class DockerSandboxService(SandboxService):
                 port_mappings[exposed_port.container_port] = host_port
                 env_vars[exposed_port.name] = str(exposed_port.container_port)
 
-        # Get user_id from context for ownership tracking
-        user_id = None
-        if self.user_context:
-            user_id = await self.user_context.get_user_id()
-
         # Prepare labels
         labels = {
             'sandbox_spec_id': sandbox_spec.id,
         }
-        if user_id:
-            labels['created_by_user_id'] = user_id
 
         # Prepare volumes
         volumes = {
@@ -647,7 +621,6 @@ class DockerSandboxServiceInjector(SandboxServiceInjector):
             get_global_config,
             get_httpx_client,
             get_sandbox_spec_service,
-            get_user_context,
         )
 
         # Get web_url from global config for CORS support
@@ -657,7 +630,6 @@ class DockerSandboxServiceInjector(SandboxServiceInjector):
         async with (
             get_httpx_client(state) as httpx_client,
             get_sandbox_spec_service(state) as sandbox_spec_service,
-            get_user_context(state, request) as user_context,
         ):
             yield DockerSandboxService(
                 sandbox_spec_service=sandbox_spec_service,
@@ -669,7 +641,6 @@ class DockerSandboxServiceInjector(SandboxServiceInjector):
                 health_check_path=self.health_check_path,
                 httpx_client=httpx_client,
                 max_num_sandboxes=self.max_num_sandboxes,
-                user_context=user_context,
                 web_url=web_url,
                 extra_hosts=self.extra_hosts,
                 startup_grace_seconds=self.startup_grace_seconds,
