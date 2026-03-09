@@ -7,12 +7,12 @@ from pydantic import BaseModel, field_validator
 from server.auth.constants import KEYCLOAK_CLIENT_ID
 from server.auth.keycloak_manager import get_keycloak_admin
 from server.auth.saas_user_auth import SaasUserAuth
+from server.constants import IS_LOCAL_ENV
 from server.routes.auth import set_response_cookie
 from server.utils.rate_limit_utils import check_rate_limit_by_user_id
 from server.utils.url_utils import get_web_url
 from storage.user_store import UserStore
 
-from enterprise.server.constants import IS_LOCAL_ENV
 from openhands.core.logger import openhands_logger as logger
 from openhands.server.user_auth import get_user_id
 from openhands.server.user_auth.user_auth import get_user_auth
