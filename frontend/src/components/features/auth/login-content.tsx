@@ -160,12 +160,11 @@ export function LoginContent({
     showBitbucket;
 
   return (
-    <div
-      className="flex flex-row items-stretch gap-8"
-      data-testid="login-content"
-    >
-      {/* Left column - Login buttons */}
-      <div className="flex flex-col items-center gap-12.5">
+    <div className="flex flex-row items-stretch gap-8">
+      <div
+        className="flex flex-col items-center w-full gap-12.5"
+        data-testid="login-content"
+      >
         <div>
           <OpenHandsLogoWhite width={106} height={72} />
         </div>
@@ -271,7 +270,6 @@ export function LoginContent({
         <TermsAndPrivacyNotice className="max-w-[320px] text-[#A3A3A3]" />
       </div>
 
-      {/* Right column - CTA */}
       <LoginCTA />
     </div>
   );
