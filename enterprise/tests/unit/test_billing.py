@@ -613,6 +613,6 @@ async def test_create_customer_setup_session_success():
             customer='mock-customer-id',
             mode='setup',
             payment_method_types=['card'],
-            success_url='https://test.com/?setup=success',
-            cancel_url='https://test.com/',
+            success_url='https://test.com?setup=success',
+            cancel_url='https://test.com',
         )
