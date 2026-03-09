@@ -325,7 +325,7 @@ async def cancel_callback(session_id: str, request: Request):
             )
             billing_session.status = 'cancelled'
             billing_session.updated_at = datetime.now(UTC)
-            session.merge(billing_session)
+            await session.merge(billing_session)
             await session.commit()
 
     return RedirectResponse(

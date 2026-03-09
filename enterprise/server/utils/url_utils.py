@@ -9,8 +9,11 @@ from openhands.app_server.config import get_global_config
 def get_web_url(request: Request):
     web_url = get_global_config().web_url
     if not web_url:
-        scheme = 'http' if request.url.hostname == 'localhost' else 'https'
-        web_url = f'{scheme}://{request.url.netloc}'
+        base_url = request.base_url
+        scheme = 'http' if base_url.hostname == 'localhost' else 'https'
+        web_url = f'{scheme}://{base_url.netloc}/'
+    elif not web_url.endswith('/'):
+        web_url = f'{web_url}/'
     return web_url
 
 
