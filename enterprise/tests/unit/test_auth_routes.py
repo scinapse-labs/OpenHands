@@ -54,11 +54,12 @@ def mock_response():
 def test_set_response_cookie(mock_response, mock_request):
     """Test setting the auth cookie on a response."""
 
-    with patch('server.routes.auth.config') as mock_config:
+    with (
+        patch('server.routes.auth.config') as mock_config,
+        patch('server.utils.url_utils.get_global_config') as get_global_config,
+    ):
         mock_config.jwt_secret.get_secret_value.return_value = 'test_secret'
-
-        # Configure mock_request.url.hostname
-        mock_request.url.hostname = 'example.com'
+        get_global_config.return_value = MagicMock(web_url='https://example.com')
 
         set_response_cookie(
             request=mock_request,

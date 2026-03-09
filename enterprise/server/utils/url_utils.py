@@ -2,6 +2,7 @@ from typing import Literal
 
 from fastapi import Request
 from server.constants import IS_FEATURE_ENV, IS_LOCAL_ENV, IS_STAGING_ENV
+from starlette.datastructures import URL
 
 from openhands.app_server.config import get_global_config
 
@@ -21,8 +22,8 @@ def get_cookie_domain() -> str | None:
     web_url = config.web_url
     # for now just use the full hostname except for staging stacks.
     return (
-        web_url
-        if web_url and not IS_FEATURE_ENV and not IS_STAGING_ENV and not IS_LOCAL_ENV
+        URL(web_url).hostname
+        if web_url and not (IS_FEATURE_ENV or IS_STAGING_ENV or IS_LOCAL_ENV)
         else None
     )
 
@@ -32,6 +33,6 @@ def get_cookie_samesite() -> Literal['lax', 'strict']:
     web_url = get_global_config().web_url
     return (
         'strict'
-        if web_url and not IS_FEATURE_ENV and not IS_STAGING_ENV and not IS_LOCAL_ENV
+        if web_url and not (IS_FEATURE_ENV or IS_STAGING_ENV or IS_LOCAL_ENV)
         else 'lax'
     )
