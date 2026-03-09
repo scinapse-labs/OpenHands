@@ -3,7 +3,7 @@ import json
 import uuid
 import warnings
 from datetime import datetime, timezone
-from typing import Annotated, Literal, Optional, cast
+from typing import Annotated, Optional, cast
 from urllib.parse import quote, urlencode
 from uuid import UUID as parse_uuid
 
@@ -27,7 +27,7 @@ from server.auth.user.user_authorizer import (
     depends_user_authorizer,
 )
 from server.config import sign_token
-from server.constants import IS_FEATURE_ENV, IS_LOCAL_ENV, IS_STAGING_ENV
+from server.constants import IS_FEATURE_ENV, IS_LOCAL_ENV
 from server.routes.event_webhook import _get_session_api_key, _get_user_id
 from server.services.org_invitation_service import (
     EmailMismatchError,
@@ -37,13 +37,12 @@ from server.services.org_invitation_service import (
     UserAlreadyMemberError,
 )
 from server.utils.rate_limit_utils import check_rate_limit_by_user_id
-from server.utils.url_utils import get_web_url
+from server.utils.url_utils import get_cookie_domain, get_cookie_samesite, get_web_url
 from sqlalchemy import select
 from storage.database import a_session_maker
 from storage.user import User
 from storage.user_store import UserStore
 
-from openhands.app_server.config import get_global_config
 from openhands.core.logger import openhands_logger as logger
 from openhands.integrations.provider import ProviderHandler
 from openhands.integrations.service_types import ProviderType, TokenResponse
@@ -96,27 +95,6 @@ def set_response_cookie(
             secure=secure,
             samesite=get_cookie_samesite(),
         )
-
-
-def get_cookie_domain() -> str | None:
-    config = get_global_config()
-    web_url = config.web_url
-    # for now just use the full hostname except for staging stacks.
-    return (
-        web_url
-        if web_url and not IS_FEATURE_ENV and not IS_STAGING_ENV and not IS_LOCAL_ENV
-        else None
-    )
-
-
-def get_cookie_samesite() -> Literal['lax', 'strict']:
-    # for localhost and feature/staging stacks we set it to 'lax' as the cookie domain won't allow 'strict'
-    web_url = get_global_config().web_url
-    return (
-        'strict'
-        if web_url and not IS_FEATURE_ENV and not IS_STAGING_ENV and not IS_LOCAL_ENV
-        else 'lax'
-    )
 
 
 def _extract_oauth_state(state: str | None) -> tuple[str, str | None, str | None]:
