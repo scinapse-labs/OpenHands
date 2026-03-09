@@ -94,7 +94,7 @@ async def device_authorization(
             expires_in=DEVICE_CODE_EXPIRES_IN,
         )
 
-        base_url = get_web_url(http_request).rstrip('/')
+        base_url = get_web_url(http_request)
         verification_uri = f'{base_url}/oauth/device/verify'
         verification_uri_complete = (
             f'{verification_uri}?user_code={device_code_entry.user_code}'

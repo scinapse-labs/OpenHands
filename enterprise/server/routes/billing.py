@@ -198,8 +198,8 @@ async def create_checkout_session(
         saved_payment_method_options={
             'payment_method_save': 'enabled',
         },
-        success_url=f'{base_url}api/billing/success?session_id={{CHECKOUT_SESSION_ID}}',
-        cancel_url=f'{base_url}api/billing/cancel?session_id={{CHECKOUT_SESSION_ID}}',
+        success_url=f'{base_url}/api/billing/success?session_id={{CHECKOUT_SESSION_ID}}',
+        cancel_url=f'{base_url}/api/billing/cancel?session_id={{CHECKOUT_SESSION_ID}}',
     )
     logger.info(
         'created_stripe_checkout_session',
@@ -300,7 +300,7 @@ async def success_callback(session_id: str, request: Request):
         await session.commit()
 
     return RedirectResponse(
-        f'{get_web_url(request)}settings/billing?checkout=success', status_code=302
+        f'{get_web_url(request)}/settings/billing?checkout=success', status_code=302
     )
 
 
@@ -329,5 +329,5 @@ async def cancel_callback(session_id: str, request: Request):
             await session.commit()
 
     return RedirectResponse(
-        f'{get_web_url(request)}settings/billing?checkout=cancel', status_code=302
+        f'{get_web_url(request)}/settings/billing?checkout=cancel', status_code=302
     )

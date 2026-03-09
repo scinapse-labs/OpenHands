@@ -11,9 +11,9 @@ def get_web_url(request: Request):
     web_url = get_global_config().web_url
     if not web_url:
         scheme = 'http' if request.url.hostname == 'localhost' else 'https'
-        web_url = f'{scheme}://{request.url.netloc}/'
-    elif not web_url.endswith('/'):
-        web_url = f'{web_url}/'
+        web_url = f'{scheme}://{request.url.netloc}'
+    else:
+        web_url = web_url.rstrip('/')
     return web_url
 
 
