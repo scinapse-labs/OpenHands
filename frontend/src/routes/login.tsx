@@ -47,7 +47,7 @@ export default function LoginPage() {
       let destination = returnTo;
       if (loginMethod) {
         const separator = returnTo.includes("?") ? "&" : "?";
-        destination = `${returnTo}${separator}login_method=${loginMethod}`;
+        destination = `${returnTo}${separator}login_method=${encodeURIComponent(loginMethod)}`;
       }
       navigate(destination, { replace: true });
     }
