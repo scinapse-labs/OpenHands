@@ -78,7 +78,7 @@ def set_response_cookie(
     signed_token = sign_token(cookie_data, config.jwt_secret.get_secret_value())  # type: ignore
 
     # Set secure cookie with signed token
-    domain = get_cookie_domain(request)
+    domain = get_cookie_domain()
     if domain:
         response.set_cookie(
             key='keycloak_auth',
@@ -86,7 +86,7 @@ def set_response_cookie(
             domain=domain,
             httponly=True,
             secure=secure,
-            samesite=get_cookie_samesite(request),
+            samesite=get_cookie_samesite(),
         )
     else:
         response.set_cookie(
@@ -94,7 +94,7 @@ def set_response_cookie(
             value=signed_token,
             httponly=True,
             secure=secure,
-            samesite=get_cookie_samesite(request),
+            samesite=get_cookie_samesite(),
         )
 
 
@@ -547,8 +547,8 @@ async def authenticate(request: Request):
         if keycloak_auth_cookie:
             response.delete_cookie(
                 key='keycloak_auth',
-                domain=get_cookie_domain(request),
-                samesite=get_cookie_samesite(request),
+                domain=get_cookie_domain(),
+                samesite=get_cookie_samesite(),
             )
 
         return response
@@ -620,8 +620,8 @@ async def logout(request: Request):
     # Always delete the cookie regardless of what happens
     response.delete_cookie(
         key='keycloak_auth',
-        domain=get_cookie_domain(request),
-        samesite=get_cookie_samesite(request),
+        domain=get_cookie_domain(),
+        samesite=get_cookie_samesite(),
     )
 
     # Try to properly logout from Keycloak, but don't fail if it doesn't work
