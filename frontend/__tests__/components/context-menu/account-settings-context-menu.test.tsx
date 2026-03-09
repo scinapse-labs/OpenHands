@@ -86,6 +86,48 @@ describe("AccountSettingsContextMenu", () => {
     expect(screen.getByText("ACCOUNT_SETTINGS$LOGOUT")).toBeInTheDocument();
   });
 
+  it("should render the CTA component", () => {
+    renderWithRouter(
+      <AccountSettingsContextMenu
+        onLogout={onLogoutMock}
+        onClose={onCloseMock}
+      />,
+    );
+
+    expect(screen.getByText("CTA$ENTERPRISE_TITLE")).toBeInTheDocument();
+    expect(screen.getByText("CTA$LEARN_MORE")).toBeInTheDocument();
+  });
+
+  it("should have correct container dimensions", () => {
+    renderWithRouter(
+      <AccountSettingsContextMenu
+        onLogout={onLogoutMock}
+        onClose={onCloseMock}
+      />,
+    );
+
+    const menuContainer = screen.getByTestId("account-settings-context-menu");
+    expect(menuContainer).toHaveClass("w-[600px]");
+    expect(menuContainer).toHaveClass("h-[499px]");
+    expect(menuContainer).toHaveClass("rounded-[12px]");
+    expect(menuContainer).toHaveClass("bg-[#050505]");
+  });
+
+  it("should render inner container with two-column layout", () => {
+    renderWithRouter(
+      <AccountSettingsContextMenu
+        onLogout={onLogoutMock}
+        onClose={onCloseMock}
+      />,
+    );
+
+    const menuContainer = screen.getByTestId("account-settings-context-menu");
+    const innerContainer = menuContainer.querySelector(".w-\\[550px\\].h-\\[449px\\]");
+    expect(innerContainer).toBeInTheDocument();
+    expect(innerContainer).toHaveClass("flex");
+    expect(innerContainer).toHaveClass("flex-row");
+  });
+
   it("should render Documentation link with correct attributes", () => {
     renderWithRouter(
       <AccountSettingsContextMenu
