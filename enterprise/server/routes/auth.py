@@ -7,7 +7,6 @@ from typing import Annotated, Literal, Optional, cast
 from urllib.parse import quote, urlencode
 from uuid import UUID as parse_uuid
 
-from openhands.server.types import AppMode
 import posthog
 from fastapi import APIRouter, Header, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -38,6 +37,7 @@ from server.services.org_invitation_service import (
     UserAlreadyMemberError,
 )
 from server.utils.rate_limit_utils import check_rate_limit_by_user_id
+from server.utils.url_utils import get_web_url
 from sqlalchemy import select
 from storage.database import a_session_maker
 from storage.user import User
@@ -103,7 +103,9 @@ def get_cookie_domain() -> str | None:
     web_url = config.web_url
     # for now just use the full hostname except for staging stacks.
     return (
-        web_url if web_url and not IS_FEATURE_ENV and not IS_STAGING_ENV and not IS_LOCAL_ENV else None
+        web_url
+        if web_url and not IS_FEATURE_ENV and not IS_STAGING_ENV and not IS_LOCAL_ENV
+        else None
     )
 
 
@@ -111,16 +113,10 @@ def get_cookie_samesite() -> Literal['lax', 'strict']:
     # for localhost and feature/staging stacks we set it to 'lax' as the cookie domain won't allow 'strict'
     web_url = get_global_config().web_url
     return (
-        'strict' if web_url and not IS_FEATURE_ENV and not IS_STAGING_ENV and not IS_LOCAL_ENV else 'lax'
+        'strict'
+        if web_url and not IS_FEATURE_ENV and not IS_STAGING_ENV and not IS_LOCAL_ENV
+        else 'lax'
     )
-
-
-def get_web_url(request: Request):
-    web_url = get_global_config().web_url
-    if not web_url:
-        scheme = 'http' if request.url.hostname == 'localhost' else 'https'
-        web_url = f'{scheme}://{request.url.netloc}'
-    return web_url
 
 
 def _extract_oauth_state(state: str | None) -> tuple[str, str | None, str | None]:
@@ -303,7 +299,9 @@ async def keycloak_callback(
             else:
                 raise
 
-        verification_redirect_url = f'{web_url}login?email_verification_required=true&user_id={user_id}'
+        verification_redirect_url = (
+            f'{web_url}login?email_verification_required=true&user_id={user_id}'
+        )
         if rate_limited:
             verification_redirect_url = f'{verification_redirect_url}&rate_limited=true'
 
@@ -464,9 +462,7 @@ async def keycloak_callback(
     # If the user hasn't accepted the TOS, redirect to the TOS page
     if not has_accepted_tos:
         encoded_redirect_url = quote(redirect_url, safe='')
-        tos_redirect_url = (
-            f'{web_url}accept-tos?redirect_url={encoded_redirect_url}'
-        )
+        tos_redirect_url = f'{web_url}accept-tos?redirect_url={encoded_redirect_url}'
         if invitation_token:
             tos_redirect_url = f'{tos_redirect_url}&invitation_success=true'
         response = RedirectResponse(tos_redirect_url, status_code=302)
@@ -522,9 +518,7 @@ async def keycloak_offline_callback(code: str, state: str, request: Request):
     )
 
     redirect_url, _, _ = _extract_oauth_state(state)
-    return RedirectResponse(
-        redirect_url if redirect_url else web_url, status_code=302
-    )
+    return RedirectResponse(redirect_url if redirect_url else web_url, status_code=302)
 
 
 @oauth_router.get('/github/callback')

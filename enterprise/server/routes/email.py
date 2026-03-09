@@ -9,8 +9,10 @@ from server.auth.keycloak_manager import get_keycloak_admin
 from server.auth.saas_user_auth import SaasUserAuth
 from server.routes.auth import set_response_cookie
 from server.utils.rate_limit_utils import check_rate_limit_by_user_id
+from server.utils.url_utils import get_web_url
 from storage.user_store import UserStore
 
+from enterprise.server.constants import IS_LOCAL_ENV
 from openhands.core.logger import openhands_logger as logger
 from openhands.server.user_auth import get_user_id
 from openhands.server.user_auth.user_auth import get_user_auth
@@ -87,7 +89,7 @@ async def update_email(
             response=response,
             keycloak_access_token=user_auth.access_token.get_secret_value(),
             keycloak_refresh_token=user_auth.refresh_token.get_secret_value(),
-            secure=False if request.url.hostname == 'localhost' else True,
+            secure=not IS_LOCAL_ENV,
             accepted_tos=user_auth.accepted_tos or False,
         )
 
@@ -156,8 +158,8 @@ async def verified_email(request: Request):
     await user_auth.refresh()  # refresh so access token has updated email
     user_auth.email_verified = True
     await UserStore.update_user_email(user_id=user_auth.user_id, email_verified=True)
-    scheme = 'http' if request.url.hostname == 'localhost' else 'https'
-    redirect_uri = f'{scheme}://{request.url.netloc}/settings/user'
+
+    redirect_uri = f'{get_web_url(request)}/settings/user'
     response = RedirectResponse(redirect_uri, status_code=302)
 
     # need to set auth cookie to the new tokens
