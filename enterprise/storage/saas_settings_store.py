@@ -189,6 +189,8 @@ class SaasSettingsStore(SettingsStore):
 
             # Propagate LLM settings to all org members
             # This ensures all members see the same LLM configuration when an admin saves
+            # Note: Concurrent saves by multiple admins will result in last-write-wins.
+            # Consider adding optimistic locking if this becomes a problem.
             member_update_values: dict = {}
             if item.llm_model is not None:
                 member_update_values['llm_model'] = item.llm_model

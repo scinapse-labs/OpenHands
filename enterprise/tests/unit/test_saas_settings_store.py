@@ -236,85 +236,163 @@ async def test_ensure_api_key_generates_new_key_when_verification_fails(
         assert item.llm_api_key.get_secret_value() == new_key
 
 
+@pytest.fixture
+def org_with_multiple_members_fixture(session_maker):
+    """Set up an organization with multiple members for testing LLM settings propagation.
+
+    Uses sync session to avoid UUID conversion issues with async SQLite.
+    """
+    from storage.encrypt_utils import decrypt_value
+    from storage.org import Org
+    from storage.org_member import OrgMember
+    from storage.role import Role
+    from storage.user import User
+
+    # Use realistic UUIDs that work well with SQLite
+    org_id = uuid.UUID('5594c7b6-f959-4b81-92e9-b09c206f5081')
+    admin_user_id = uuid.UUID('5594c7b6-f959-4b81-92e9-b09c206f5082')
+    member1_user_id = uuid.UUID('5594c7b6-f959-4b81-92e9-b09c206f5083')
+    member2_user_id = uuid.UUID('5594c7b6-f959-4b81-92e9-b09c206f5084')
+
+    with session_maker() as session:
+        # Create role
+        role = Role(id=10, name='member', rank=3)
+        session.add(role)
+
+        # Create org
+        org = Org(
+            id=org_id,
+            name='test-org',
+            org_version=1,
+            enable_default_condenser=True,
+            enable_proactive_conversation_starters=True,
+        )
+        session.add(org)
+
+        # Create users
+        admin_user = User(
+            id=admin_user_id, current_org_id=org_id, user_consents_to_analytics=True
+        )
+        session.add(admin_user)
+
+        member1_user = User(
+            id=member1_user_id, current_org_id=org_id, user_consents_to_analytics=True
+        )
+        session.add(member1_user)
+
+        member2_user = User(
+            id=member2_user_id, current_org_id=org_id, user_consents_to_analytics=True
+        )
+        session.add(member2_user)
+
+        # Create org members with DIFFERENT initial LLM settings
+        admin_member = OrgMember(
+            org_id=org_id,
+            user_id=admin_user_id,
+            role_id=10,
+            llm_api_key='admin-initial-key',
+            llm_model='old-model-v1',
+            llm_base_url='http://old-url-1.com',
+            max_iterations=10,
+            status='active',
+        )
+        session.add(admin_member)
+
+        member1 = OrgMember(
+            org_id=org_id,
+            user_id=member1_user_id,
+            role_id=10,
+            llm_api_key='member1-initial-key',
+            llm_model='old-model-v2',
+            llm_base_url='http://old-url-2.com',
+            max_iterations=20,
+            status='active',
+        )
+        session.add(member1)
+
+        member2 = OrgMember(
+            org_id=org_id,
+            user_id=member2_user_id,
+            role_id=10,
+            llm_api_key='member2-initial-key',
+            llm_model='old-model-v3',
+            llm_base_url='http://old-url-3.com',
+            max_iterations=30,
+            status='active',
+        )
+        session.add(member2)
+
+        session.commit()
+
+    return {
+        'org_id': org_id,
+        'admin_user_id': admin_user_id,
+        'member1_user_id': member1_user_id,
+        'member2_user_id': member2_user_id,
+        'decrypt_value': decrypt_value,
+    }
+
+
 @pytest.mark.asyncio
-async def test_store_propagates_llm_settings_to_all_org_members(mock_config):
+async def test_store_propagates_llm_settings_to_all_org_members(
+    session_maker, async_session_maker, mock_config, org_with_multiple_members_fixture
+):
     """When admin saves LLM settings, all org members should receive the updated settings.
 
-    This test verifies that the store() method executes a bulk UPDATE statement
-    to propagate LLM settings to all organization members.
+    This test verifies using a real database that:
+    1. The bulk UPDATE targets the correct organization (WHERE clause is correct)
+    2. All LLM fields are correctly set (llm_model, llm_base_url, max_iterations, llm_api_key)
+    3. The llm_api_key is properly encrypted
+    4. All members in the org receive the same updated values
     """
-    # Arrange
-    org_id = uuid.UUID('11111111-1111-1111-1111-111111111111')
-    admin_user_id = uuid.UUID('22222222-2222-2222-2222-222222222222')
+    from sqlalchemy import select
+    from storage.org_member import OrgMember
 
-    store = SaasSettingsStore(str(admin_user_id), mock_config)
+    # Arrange
+    fixture = org_with_multiple_members_fixture
+    org_id = fixture['org_id']
+    admin_user_id = str(fixture['admin_user_id'])
+    decrypt_value = fixture['decrypt_value']
+
+    store = SaasSettingsStore(admin_user_id, mock_config)
 
     new_settings = DataSettings(
-        llm_model='new-model/gpt-4',
-        llm_base_url='http://new-url.com',
+        llm_model='new-shared-model/gpt-4',
+        llm_base_url='http://new-shared-url.com',
         max_iterations=100,
         llm_api_key=SecretStr('new-shared-api-key'),
     )
 
-    # Create mock user and org_member
-    mock_user = MagicMock()
-    mock_user.current_org_id = org_id
-    mock_org_member = MagicMock()
-    mock_org_member.org_id = org_id
-    mock_org_member.llm_api_key = SecretStr('existing-key')
-    mock_user.org_members = [mock_org_member]
-
-    mock_org = MagicMock()
-    mock_org.id = org_id
-
-    # Track all execute calls
-    execute_calls = []
-
-    # First execute returns user
-    user_result = MagicMock()
-    user_result.scalars.return_value.first.return_value = mock_user
-
-    # Second execute returns org
-    org_result = MagicMock()
-    org_result.scalars.return_value.first.return_value = mock_org
-
-    async def mock_execute(stmt):
-        execute_calls.append(stmt)
-        if len(execute_calls) == 1:
-            return user_result
-        elif len(execute_calls) == 2:
-            return org_result
-        return MagicMock()
-
-    # Create mock session with async context manager
-    mock_session = MagicMock()
-    mock_session.execute = mock_execute
-    mock_session.commit = AsyncMock()
-
-    class MockAsyncContextManager:
-        async def __aenter__(self):
-            return mock_session
-
-        async def __aexit__(self, exc_type, exc_val, exc_tb):
-            return None
-
-    mock_session_maker = MagicMock(return_value=MockAsyncContextManager())
-
-    # Act
-    with patch('storage.saas_settings_store.a_session_maker', mock_session_maker):
+    # Act - call store() with async session
+    with patch('storage.saas_settings_store.a_session_maker', async_session_maker):
         await store.store(new_settings)
 
-    # Assert - verify that a bulk UPDATE was executed for OrgMember
-    # The third execute call should be the bulk UPDATE for all org members
-    assert (
-        len(execute_calls) >= 3
-    ), 'Expected at least 3 execute calls (user query, org query, bulk update)'
+    # Assert - verify ALL org members have the updated LLM settings using sync session
+    with session_maker() as session:
+        result = session.execute(select(OrgMember).where(OrgMember.org_id == org_id))
+        members = result.scalars().all()
 
-    # The last execute call before commit should be the bulk UPDATE
-    bulk_update_stmt = execute_calls[-1]
+        # Verify we have all 3 members
+        assert len(members) == 3, f'Expected 3 org members, got {len(members)}'
 
-    # Verify it's an UPDATE statement targeting OrgMember
-    stmt_str = str(bulk_update_stmt)
-    assert (
-        'UPDATE' in stmt_str.upper() or 'org_member' in stmt_str.lower()
-    ), f'Expected bulk UPDATE on org_member table, got: {stmt_str}'
+        for member in members:
+            # Verify LLM model is updated
+            assert (
+                member.llm_model == 'new-shared-model/gpt-4'
+            ), f'Expected llm_model to be updated for member {member.user_id}'
+
+            # Verify LLM base URL is updated
+            assert (
+                member.llm_base_url == 'http://new-shared-url.com'
+            ), f'Expected llm_base_url to be updated for member {member.user_id}'
+
+            # Verify max_iterations is updated
+            assert (
+                member.max_iterations == 100
+            ), f'Expected max_iterations to be 100 for member {member.user_id}'
+
+            # Verify the API key is encrypted and decrypts to the correct value
+            decrypted_key = decrypt_value(member._llm_api_key)
+            assert (
+                decrypted_key == 'new-shared-api-key'
+            ), f'Expected llm_api_key to decrypt to new-shared-api-key for member {member.user_id}'
