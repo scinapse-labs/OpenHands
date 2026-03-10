@@ -79,7 +79,7 @@ def get_default_web_url() -> str | None:
     web_host = os.getenv('WEB_HOST')
     if not web_host:
         return None
-    return f'http://{web_host}'
+    return f'https://{web_host}'
 
 
 def get_openhands_provider_base_url() -> str | None:
