@@ -1,3 +1,4 @@
+import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -233,3 +234,87 @@ async def test_ensure_api_key_generates_new_key_when_verification_fails(
 
         assert item.llm_api_key is not None
         assert item.llm_api_key.get_secret_value() == new_key
+
+
+@pytest.mark.asyncio
+async def test_store_propagates_llm_settings_to_all_org_members(mock_config):
+    """When admin saves LLM settings, all org members should receive the updated settings.
+
+    This test verifies that the store() method executes a bulk UPDATE statement
+    to propagate LLM settings to all organization members.
+    """
+    # Arrange
+    org_id = uuid.UUID('11111111-1111-1111-1111-111111111111')
+    admin_user_id = uuid.UUID('22222222-2222-2222-2222-222222222222')
+
+    store = SaasSettingsStore(str(admin_user_id), mock_config)
+
+    new_settings = DataSettings(
+        llm_model='new-model/gpt-4',
+        llm_base_url='http://new-url.com',
+        max_iterations=100,
+        llm_api_key=SecretStr('new-shared-api-key'),
+    )
+
+    # Create mock user and org_member
+    mock_user = MagicMock()
+    mock_user.current_org_id = org_id
+    mock_org_member = MagicMock()
+    mock_org_member.org_id = org_id
+    mock_org_member.llm_api_key = SecretStr('existing-key')
+    mock_user.org_members = [mock_org_member]
+
+    mock_org = MagicMock()
+    mock_org.id = org_id
+
+    # Track all execute calls
+    execute_calls = []
+
+    # First execute returns user
+    user_result = MagicMock()
+    user_result.scalars.return_value.first.return_value = mock_user
+
+    # Second execute returns org
+    org_result = MagicMock()
+    org_result.scalars.return_value.first.return_value = mock_org
+
+    async def mock_execute(stmt):
+        execute_calls.append(stmt)
+        if len(execute_calls) == 1:
+            return user_result
+        elif len(execute_calls) == 2:
+            return org_result
+        return MagicMock()
+
+    # Create mock session with async context manager
+    mock_session = MagicMock()
+    mock_session.execute = mock_execute
+    mock_session.commit = AsyncMock()
+
+    class MockAsyncContextManager:
+        async def __aenter__(self):
+            return mock_session
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+    mock_session_maker = MagicMock(return_value=MockAsyncContextManager())
+
+    # Act
+    with patch('storage.saas_settings_store.a_session_maker', mock_session_maker):
+        await store.store(new_settings)
+
+    # Assert - verify that a bulk UPDATE was executed for OrgMember
+    # The third execute call should be the bulk UPDATE for all org members
+    assert (
+        len(execute_calls) >= 3
+    ), 'Expected at least 3 execute calls (user query, org query, bulk update)'
+
+    # The last execute call before commit should be the bulk UPDATE
+    bulk_update_stmt = execute_calls[-1]
+
+    # Verify it's an UPDATE statement targeting OrgMember
+    stmt_str = str(bulk_update_stmt)
+    assert (
+        'UPDATE' in stmt_str.upper() or 'org_member' in stmt_str.lower()
+    ), f'Expected bulk UPDATE on org_member table, got: {stmt_str}'
